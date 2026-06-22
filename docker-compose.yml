@@ -1,0 +1,29 @@
+version: "3.8"
+
+services:
+  # 1. Onze Message Broker (RabbitMQ)
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: ballcom_rabbitmq
+    ports:
+      - "5672:5672" # Dit is de poort waar je .NET code straks berichten naartoe stuurt
+      - "15672:15672" # Dit is het dashboard waar je in de browser naar kunt kijken
+    networks:
+      - ballcom_network
+
+  # 2. De database voor de Ordering Service
+  ordering_db:
+    image: postgres:latest
+    container_name: ballcom_ordering_db
+    environment:
+      POSTGRES_USER: ballcom_user
+      POSTGRES_PASSWORD: ballcom_password
+      POSTGRES_DB: ordering_db
+    ports:
+      - "5432:5432" # De poort van je database
+    networks:
+      - ballcom_network
+
+networks:
+  ballcom_network:
+    driver: bridge
