@@ -24,6 +24,19 @@ services:
     networks:
       - ballcom_network
 
+  # 3. De database voor de Catalog Service (eigen database per microservice)
+  catalog_db:
+    image: postgres:latest
+    container_name: ballcom_catalog_db
+    environment:
+      POSTGRES_USER: catalog_user
+      POSTGRES_PASSWORD: catalog_password
+      POSTGRES_DB: catalog_db
+    ports:
+      - "5433:5432" # Eigen poort (5433) om conflict met ordering_db (5432) te vermijden
+    networks:
+      - ballcom_network
+
 networks:
   ballcom_network:
     driver: bridge

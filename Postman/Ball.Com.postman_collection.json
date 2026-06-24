@@ -88,6 +88,176 @@
       ]
     },
     {
+      "name": "Catalog Microservice",
+      "item": [
+        {
+          "name": "Register Trusted Supplier",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"name\": \"ACME Supplies\",\r\n  \"contactEmail\": \"sales@acme.com\"\r\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "http://localhost:5200/api/suppliers",
+              "protocol": "http",
+              "host": [ "localhost" ],
+              "port": "5200",
+              "path": [ "api", "suppliers" ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Suppliers",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:5200/api/suppliers",
+              "protocol": "http",
+              "host": [ "localhost" ],
+              "port": "5200",
+              "path": [ "api", "suppliers" ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Add Product",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"name\": \"Voetbal\",\r\n  \"description\": \"Maat 5\",\r\n  \"price\": 24.99,\r\n  \"stock\": 100,\r\n  \"supplierId\": \"REPLACE-WITH-SUPPLIER-ID\"\r\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "http://localhost:5200/api/products",
+              "protocol": "http",
+              "host": [ "localhost" ],
+              "port": "5200",
+              "path": [ "api", "products" ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Products",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:5200/api/products",
+              "protocol": "http",
+              "host": [ "localhost" ],
+              "port": "5200",
+              "path": [ "api", "products" ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Product By Id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:5200/api/products/REPLACE-WITH-PRODUCT-ID",
+              "protocol": "http",
+              "host": [ "localhost" ],
+              "port": "5200",
+              "path": [ "api", "products", "REPLACE-WITH-PRODUCT-ID" ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Product",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"name\": \"Voetbal Pro\",\r\n  \"description\": \"Maat 5 wedstrijdbal\",\r\n  \"price\": 29.99,\r\n  \"stock\": 80\r\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "http://localhost:5200/api/products/REPLACE-WITH-PRODUCT-ID",
+              "protocol": "http",
+              "host": [ "localhost" ],
+              "port": "5200",
+              "path": [ "api", "products", "REPLACE-WITH-PRODUCT-ID" ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Supplier Portal",
+      "item": [
+        {
+          "name": "Register Supplier (via portal)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"name\": \"ACME Supplies\",\r\n  \"contactEmail\": \"sales@acme.com\"\r\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "http://localhost:5300/api/supplier/register",
+              "protocol": "http",
+              "host": [ "localhost" ],
+              "port": "5300",
+              "path": [ "api", "supplier", "register" ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Add Product (via portal)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"name\": \"Voetbal\",\r\n  \"description\": \"Maat 5\",\r\n  \"price\": 24.99,\r\n  \"stock\": 100,\r\n  \"supplierId\": \"REPLACE-WITH-SUPPLIER-ID\"\r\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "http://localhost:5300/api/supplier/products",
+              "protocol": "http",
+              "host": [ "localhost" ],
+              "port": "5300",
+              "path": [ "api", "supplier", "products" ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Products (via portal)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:5300/api/supplier/products",
+              "protocol": "http",
+              "host": [ "localhost" ],
+              "port": "5300",
+              "path": [ "api", "supplier", "products" ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
       "name": "Get data",
       "event": [
         {
