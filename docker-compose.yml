@@ -1,7 +1,7 @@
 version: "3.8"
 
 services:
-  # 1. Onze Message Broker (RabbitMQ)
+  # 1.  Message Broker (RabbitMQ)
   rabbitmq:
     image: rabbitmq:3-management
     container_name: ballcom_rabbitmq

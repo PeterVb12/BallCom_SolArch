@@ -18,4 +18,5 @@
 
     public record CreateOrderCommand(List<OrderItemDto> Items);
     public record OrderItemDto(string ProductId, int Quantity, decimal Price);
+    public record OrderPlacedEvent(int OrderId, decimal TotalPrice, DateTime CreatedAt);
 }
