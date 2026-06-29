@@ -17,6 +17,8 @@ builder.Services.AddDbContext<OrderingDbContext>(options =>
 builder.Services.AddControllers();
 
 builder.Services.AddScoped<IEventPublisher, RabbitMQEventPublisher>();
+// Start de RabbitMQ Consumer op de achtergrond
+builder.Services.AddHostedService<RabbitMQEventConsumer>();
 
 var app = builder.Build();
 

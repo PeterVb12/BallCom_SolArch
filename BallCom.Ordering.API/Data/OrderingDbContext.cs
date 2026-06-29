@@ -9,5 +9,8 @@ namespace BallCom.Ordering.API.Data
 
         public DbSet<Order> Orders { get; set; }
         public DbSet<OrderItem> OrderItems { get; set; }
+
+        //lokale referentie tabel
+        public DbSet<Product> Products { get; set; }
     }
 }

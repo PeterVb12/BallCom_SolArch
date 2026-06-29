@@ -43,6 +43,27 @@ namespace BallCom.Catalog.API.Controllers
                 return BadRequest("Alleen vertrouwde suppliers mogen producten toevoegen aan de catalogus.");
             }
 
+            // Controleer of deze leverancier dit product (op basis van naam) al eens heeft toegevoegd
+            var existingProduct = await _context.Products
+                .FirstOrDefaultAsync(p => p.Name.ToLower() == command.Name.ToLower() && p.SupplierId == command.SupplierId);
+
+            if (existingProduct != null)
+            {
+                // Het product bestaat al! We verhogen de voorraad (Stock)
+                existingProduct.Stock += command.Stock;
+                
+                // We updaten de database
+                _context.Products.Update(existingProduct);
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation("[Catalog Service] Product '{Name}' bestond al. Voorraad opgehoogd met {Stock}. Nieuwe totale voorraad: {TotalStock}", 
+                    existingProduct.Name, command.Stock, existingProduct.Stock);
+
+                // OPMERKING VOOR STRAKS: In een volwaardig EDA systeem zouden we nu een 'ProductStockIncreasedEvent' sturen.
+                // Voor nu returnen we de geüpdatete versie van het bestaande product.
+                return Ok(existingProduct);
+            }
+
             var productId = Guid.NewGuid();
             var occurredAt = DateTime.UtcNow;
 
@@ -54,7 +75,7 @@ namespace BallCom.Catalog.API.Controllers
             eventStore.Append(productId, nameof(Product), productAddedEvent);
 
             // ...en projecteer het read model (Products tabel) vanuit dat event.
-            var product = Apply(new Product(), productAddedEvent);
+            var product = Apply(new Product(), productAddedEvent);//CQRS
             _context.Products.Add(product);
 
             await _context.SaveChangesAsync();
