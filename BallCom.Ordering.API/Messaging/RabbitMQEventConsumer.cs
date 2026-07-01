@@ -1,21 +1,16 @@
 using System.Text;
 using System.Text.Json;
 using BallCom.Ordering.API.Data;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
+using BallCom.Ordering.API.Models;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 
 namespace BallCom.Ordering.API.Messaging
 {
-    // Dit klasse-ontwerp komt overeen met het ProductAddedEvent uit de Catalog.API
-    public record ProductAddedIntegrationEvent(Guid ProductId, string Name, string Description, decimal Price, int Stock, Guid SupplierId, DateTime OccurredAt);
-
     public class RabbitMQEventConsumer : BackgroundService
     {
         private readonly ILogger<RabbitMQEventConsumer> _logger;
-        private readonly IServiceScopeFactory _scopeFactory; // Nodig om met de database te praten
+        private readonly IServiceScopeFactory _scopeFactory;
         private IConnection _connection;
         private IModel _channel;
         private string _queueName;
@@ -54,26 +49,24 @@ namespace BallCom.Ordering.API.Messaging
                 var body = ea.Body.ToArray();
                 var json = Encoding.UTF8.GetString(body);
                 
-                _logger.LogInformation("[Ordering Service] Bericht ontvangen via RabbitMQ: {Json}", json);
+                _logger.LogInformation("[Ordering Service] Bericht ontvangen via RabbitMQ: {Json} met RoutingKey: {Key}", json, ea.RoutingKey);
 
                 try
                 {
-                    // Probeer te kijken of het bericht een ProductAddedEvent is
-                    // (Omdat we Fanout gebruiken, checken we of de routingKey of de inhoud overeenkomt)
+                    // CASE 1: Nieuw product toegevoegd in Catalogus
                     if (ea.RoutingKey == "ProductAddedEvent")
                     {
                         var productEvent = JsonSerializer.Deserialize<ProductAddedIntegrationEvent>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
                         
                         if (productEvent != null)
                         {
-                            using var scope = _scopeFactory.CreateScope();
+                            var scope = _scopeFactory.CreateScope();
                             var dbContext = scope.ServiceProvider.GetRequiredService<OrderingDbContext>();
 
                             var exists = dbContext.Products.Any(p => p.Id == productEvent.ProductId);
                             if (!exists)
                             {
-                                _logger.LogInformation("HIER MOET JE KIJKEN: {ProductId}", productEvent.ProductId.ToString());
-                                var newProduct = new Models.Product
+                                var newProduct = new Product
                                 {
                                     Id = productEvent.ProductId,
                                     Name = productEvent.Name,
@@ -86,9 +79,36 @@ namespace BallCom.Ordering.API.Messaging
                             }
                         }
                     }
+                    // CASE 2: Product bijgewerkt in Catalogus (Nu gekoppeld aan jouw nieuwe ProductUpdatedEvent)
+                    else if (ea.RoutingKey == "ProductUpdatedEvent")
+                    {
+                        var productEvent = JsonSerializer.Deserialize<ProductUpdatedEvent>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                        
+                        if (productEvent != null)
+                        {
+                            var scope = _scopeFactory.CreateScope();
+                            var dbContext = scope.ServiceProvider.GetRequiredService<OrderingDbContext>();
+
+                            // Zoek het product lokaal op in de Ordering database
+                            var product = dbContext.Products.FirstOrDefault(p => p.Id == productEvent.ProductId);
+                            if (product != null)
+                            {
+                                // Synchroniseer de lokale gegevens
+                                product.Name = productEvent.Name;
+                                product.Price = productEvent.Price;
+                                
+                                await dbContext.SaveChangesAsync();
+                                _logger.LogInformation("[Ordering Service] Product {Name} succesvol BIJGEWERKT in ordering_db!", product.Name);
+                            }
+                            else
+                            {
+                                _logger.LogWarning("[Ordering Service] Product {ProductId} kon niet worden geüpdatet omdat het hier onbekend is.", productEvent.ProductId);
+                            }
+                        }
+                    }
+                    // Onbekende of irrelevante events negeren
                     else
                     {
-                        // Log dat we het bericht negeren omdat het niet voor ons (of deze tabel) bedoeld is
                         _logger.LogInformation("[Ordering Service] Event genegeerd (RoutingKey: {Key}). Niet relevant voor de producttabel.", ea.RoutingKey);
                     }
                 }
@@ -105,9 +125,9 @@ namespace BallCom.Ordering.API.Messaging
 
         public override void Dispose()
         {
-            _channel?.Close();
-            _connection?.Close();
-            base.Dispose();
+            _channel?.Close(); // Sluit de RabbitMQ channel
+            _connection?.Close(); // Sluit de netwerkverbinding
+            base.Dispose(); // Laat de achtergrond service de rest opruimen
         }
     }
 }
