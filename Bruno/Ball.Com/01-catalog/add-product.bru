@@ -1,0 +1,29 @@
+meta {
+  name: Add Product
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{catalogUrl}}/api/products
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "name": "Voetbal",
+    "description": "Maat 5",
+    "price": 24.99,
+    "stock": 100,
+    "supplierId": "{{supplierId}}"
+  }
+}
+
+script:post-response {
+  const data = res.getBody();
+  if (data && data.id) {
+    bru.setVar("productId", data.id);
+    bru.setEnvVar("productId", data.id);
+  }
+}

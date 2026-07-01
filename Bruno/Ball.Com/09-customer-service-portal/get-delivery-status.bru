@@ -1,0 +1,11 @@
+meta {
+  name: Get Delivery Status (via portal)
+  type: http
+  seq: 8
+}
+
+get {
+  url: {{customerServicePortalUrl}}/api/service/delivery/orders/{{servicePortalOrderId}}/status
+  body: none
+  auth: none
+}

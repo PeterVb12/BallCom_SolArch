@@ -9,8 +9,8 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddOpenApi();
 
 
-// Connectie naar de Postgres container in Docker
-var connectionString = "Host=localhost;Port=5432;Database=ordering_db;Username=ballcom_user;Password=ballcom_password";
+var connectionString = builder.Configuration.GetConnectionString("Default")
+    ?? throw new InvalidOperationException("ConnectionStrings:Default is not configured.");
 builder.Services.AddDbContext<OrderingDbContext>(options =>
     options.UseNpgsql(connectionString));
 
@@ -25,7 +25,7 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<OrderingDbContext>();
-    dbContext.Database.EnsureCreated();
+    await OrderingDbInitializer.InitializeAsync(dbContext);
 }
 
 app.MapControllers();

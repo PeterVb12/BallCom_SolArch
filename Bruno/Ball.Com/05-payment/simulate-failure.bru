@@ -1,0 +1,25 @@
+meta {
+  name: Start Payment - Simulate Failure
+  type: http
+  seq: 9
+}
+
+post {
+  url: {{paymentUrl}}/api/payments
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "orderId": {{orderId}},
+    "paymentMethod": "ForwardPay",
+    "simulateFailure": true
+  }
+}
+
+tests {
+  test("returns 402 on simulated payment failure", function () {
+    expect(res.getStatus()).to.equal(402);
+  });
+}

@@ -1,0 +1,19 @@
+meta {
+  name: Get Products
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{catalogUrl}}/api/products
+  body: none
+  auth: none
+}
+
+script:post-response {
+  const data = res.getBody();
+  if (Array.isArray(data) && data.length > 0 && data[0].id) {
+    bru.setVar("productId", data[0].id);
+    bru.setEnvVar("productId", data[0].id);
+  }
+}

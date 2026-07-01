@@ -8,8 +8,7 @@ builder.Services.AddOpenApi();
 // Het supplier-portaal is een dunne BFF die requests doorzet naar de Catalog microservice.
 builder.Services.AddHttpClient("CatalogService", client =>
 {
-    // De Catalog API draait op poort 5200
-    client.BaseAddress = new Uri("http://localhost:5200/");
+    client.BaseAddress = new Uri(builder.Configuration["Services:Catalog"] ?? "http://localhost:5200/");
 });
 
 builder.Services.AddControllers();

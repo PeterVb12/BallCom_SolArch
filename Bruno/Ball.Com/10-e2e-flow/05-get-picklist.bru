@@ -1,0 +1,26 @@
+meta {
+  name: 05 Get PickList
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{warehousePortalUrl}}/api/warehouse/picklists
+  body: none
+  auth: none
+}
+
+script:pre-request {
+  await new Promise(resolve => setTimeout(resolve, 1500));
+}
+
+script:post-response {
+  const data = res.getBody();
+  const pickList = Array.isArray(data)
+    ? data.find(p => p.orderId === bru.getVar("orderId") || p.orderId === bru.getEnvVar("orderId")) || data[0]
+    : data;
+  if (pickList && pickList.id) {
+    bru.setVar("pickListId", pickList.id);
+    bru.setEnvVar("pickListId", pickList.id);
+  }
+}

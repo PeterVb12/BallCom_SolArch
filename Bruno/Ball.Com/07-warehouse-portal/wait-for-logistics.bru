@@ -1,0 +1,43 @@
+meta {
+  name: Wait For Logistics Shipment
+  type: http
+  seq: 9
+}
+
+get {
+  url: {{logisticsUrl}}/api/shipments/order/{{servicePortalOrderId}}
+  body: none
+  auth: none
+}
+
+script:pre-request {
+  const orderId = bru.getVar("servicePortalOrderId") || bru.getEnvVar("servicePortalOrderId");
+  const logisticsUrl = bru.getEnvVar("logisticsUrl");
+  const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+  if (!orderId) {
+    throw new Error("servicePortalOrderId ontbreekt — voer eerst place-order in deze map uit.");
+  }
+
+  for (let attempt = 1; attempt <= 25; attempt++) {
+    const response = await new Promise((resolve, reject) => {
+      bru.sendRequest({
+        url: `${logisticsUrl}/api/shipments/order/${orderId}`,
+        method: "GET",
+        headers: { Accept: "application/json" }
+      }, (err, res) => (err ? reject(err) : resolve(res)));
+    });
+
+    if (response.status === 200) {
+      return;
+    }
+
+    await sleep(1000);
+  }
+}
+
+tests {
+  test("shipment exists after warehouse ready", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+}

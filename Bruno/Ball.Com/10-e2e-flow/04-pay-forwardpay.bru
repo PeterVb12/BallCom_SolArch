@@ -1,0 +1,22 @@
+meta {
+  name: 04 Pay ForwardPay
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{customerPortalUrl}}/api/customer/payments
+  body: json
+  auth: none
+}
+
+script:pre-request {
+  await new Promise(resolve => setTimeout(resolve, 1500));
+}
+
+body:json {
+  {
+    "orderId": {{orderId}},
+    "paymentMethod": "ForwardPay"
+  }
+}

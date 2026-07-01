@@ -1,0 +1,35 @@
+meta {
+  name: Place Order (via portal)
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{customerPortalUrl}}/api/customer/orders
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "customer": {
+      "email": "klant@example.com",
+      "fullName": "Jan Klant",
+      "street": "Hoofdstraat 1",
+      "city": "Amsterdam",
+      "postalCode": "1011AB",
+      "country": "NL"
+    },
+    "items": [
+      { "productId": "{{productId}}", "quantity": 2, "price": 0 }
+    ]
+  }
+}
+
+script:post-response {
+  const data = res.getBody();
+  if (data && data.id) {
+    bru.setVar("orderId", data.id);
+    bru.setEnvVar("orderId", data.id);
+  }
+}

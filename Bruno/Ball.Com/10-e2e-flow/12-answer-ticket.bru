@@ -1,0 +1,18 @@
+meta {
+  name: 12 Answer Ticket
+  type: http
+  seq: 13
+}
+
+post {
+  url: {{customerServicePortalUrl}}/api/service/tickets/{{ticketId}}/answer
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "answer": "Uw pakket is klaar voor verzending en wordt binnenkort opgehaald door de logistieke partner.",
+    "answeredBy": "{{employeeName}}"
+  }
+}

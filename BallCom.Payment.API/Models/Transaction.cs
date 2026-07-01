@@ -21,6 +21,7 @@ namespace BallCom.Payment.API.Models
         public const string Pending = "PENDING";
         public const string Paid = "PAID";
         public const string Failed = "FAILED";
+        public const string Cancelled = "CANCELLED";
     }
 
     public static class PaymentMethods

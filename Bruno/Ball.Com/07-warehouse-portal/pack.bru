@@ -1,0 +1,11 @@
+meta {
+  name: Pack (via portal)
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{warehousePortalUrl}}/api/warehouse/picklists/{{pickListId}}/pack
+  body: none
+  auth: none
+}

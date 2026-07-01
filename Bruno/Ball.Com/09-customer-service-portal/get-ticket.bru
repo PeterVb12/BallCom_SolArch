@@ -1,0 +1,11 @@
+meta {
+  name: Get Ticket By Id (via portal)
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{customerServicePortalUrl}}/api/service/tickets/{{ticketId}}
+  body: none
+  auth: none
+}

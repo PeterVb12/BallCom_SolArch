@@ -1,0 +1,35 @@
+meta {
+  name: Place Order (simulate failure)
+  type: http
+  seq: 8
+}
+
+post {
+  url: {{orderingUrl}}/api/orders
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "customer": {
+      "email": "fail@example.com",
+      "fullName": "Fail Test",
+      "street": "Failstraat 1",
+      "city": "Den Haag",
+      "postalCode": "2511AB",
+      "country": "NL"
+    },
+    "items": [
+      { "productId": "{{productId}}", "quantity": 1, "price": 0 }
+    ]
+  }
+}
+
+script:post-response {
+  const data = res.getBody();
+  if (data && data.id) {
+    bru.setVar("orderId", data.id);
+    bru.setEnvVar("orderId", data.id);
+  }
+}

@@ -1,0 +1,37 @@
+headers {
+  Content-Type: application/json
+  Accept: application/json
+}
+
+vars {
+  customerPortalUrl: http://localhost:5000
+  orderingUrl: http://localhost:5100
+  catalogUrl: http://localhost:5200
+  supplierPortalUrl: http://localhost:5300
+  paymentUrl: http://localhost:5400
+  warehouseUrl: http://localhost:5500
+  warehousePortalUrl: http://localhost:5600
+  customerServiceUrl: http://localhost:5700
+  customerServicePortalUrl: http://localhost:5800
+  logisticsUrl: http://localhost:5900
+  supplierId: 
+  productId: 
+  orderId: 1
+  servicePortalOrderId: 
+  pickListId: 
+  ticketId: 
+  employeeId: EMP-42
+  employeeName: Jan de Servicemedewerker
+}
+
+docs {
+  Ball.com microservices API-collectie.
+
+  Open deze map in Bruno: Bruno/Ball.Com (niet de bovenliggende Bruno-map).
+
+  Environments: kies rechtsboven Local of Docker in het dropdown.
+  Zonder environment werken requests ook — defaults staan in collection vars.
+
+  Volledige stack: docker compose up --build -d
+  Hybride: alleen infra in Docker, APIs via dotnet run — gebruik Local.
+}

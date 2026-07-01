@@ -1,0 +1,17 @@
+meta {
+  name: Wait For Shipment (logistics async)
+  type: http
+  seq: 7
+}
+
+get {
+  url: {{logisticsUrl}}/api/shipments/order/{{servicePortalOrderId}}
+  body: none
+  auth: none
+}
+
+tests {
+  test("shipment exists for service portal order", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+}

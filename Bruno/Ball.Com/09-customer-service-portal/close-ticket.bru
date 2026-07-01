@@ -1,0 +1,11 @@
+meta {
+  name: Close Ticket (via portal)
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{customerServicePortalUrl}}/api/service/tickets/{{ticketId}}/close
+  body: none
+  auth: none
+}

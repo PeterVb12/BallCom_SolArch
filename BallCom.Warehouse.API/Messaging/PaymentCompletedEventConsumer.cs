@@ -13,7 +13,7 @@ namespace BallCom.Warehouse.API.Messaging
         private readonly IServiceScopeFactory _scopeFactory;
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly ILogger<PaymentCompletedEventConsumer> _logger;
-        private readonly string _hostname = "localhost";
+        private readonly string _hostname;
         private readonly string _exchangeName = "ballcom-exchange";
         private readonly string _queueName = "warehouse.payment-completed";
 
@@ -22,11 +22,13 @@ namespace BallCom.Warehouse.API.Messaging
 
         public PaymentCompletedEventConsumer(IServiceScopeFactory scopeFactory,
                                              IHttpClientFactory httpClientFactory,
-                                             ILogger<PaymentCompletedEventConsumer> logger)
+                                             ILogger<PaymentCompletedEventConsumer> logger,
+                                             IConfiguration configuration)
         {
             _scopeFactory = scopeFactory;
             _httpClientFactory = httpClientFactory;
             _logger = logger;
+            _hostname = configuration["RabbitMQ:Host"] ?? "localhost";
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)

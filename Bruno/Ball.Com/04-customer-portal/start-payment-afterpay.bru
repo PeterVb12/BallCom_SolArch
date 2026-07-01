@@ -1,0 +1,18 @@
+meta {
+  name: Start Payment - AfterPay (via portal)
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{customerPortalUrl}}/api/customer/payments
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "orderId": {{orderId}},
+    "paymentMethod": "AfterPay"
+  }
+}

@@ -1,0 +1,35 @@
+meta {
+  name: Place Order (for AfterPay)
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{customerPortalUrl}}/api/customer/orders
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "customer": {
+      "email": "afterpay@example.com",
+      "fullName": "AfterPay Klant",
+      "street": "Betaalstraat 2",
+      "city": "Utrecht",
+      "postalCode": "3511AB",
+      "country": "NL"
+    },
+    "items": [
+      { "productId": "{{productId}}", "quantity": 1, "price": 0 }
+    ]
+  }
+}
+
+script:post-response {
+  const data = res.getBody();
+  if (data && data.id) {
+    bru.setVar("orderId", data.id);
+    bru.setEnvVar("orderId", data.id);
+  }
+}

@@ -1,0 +1,11 @@
+meta {
+  name: Complete Payment - AfterPay (via portal)
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{customerPortalUrl}}/api/customer/payments/{{orderId}}/complete
+  body: none
+  auth: none
+}

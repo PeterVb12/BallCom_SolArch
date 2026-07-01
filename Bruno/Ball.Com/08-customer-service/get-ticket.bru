@@ -1,0 +1,11 @@
+meta {
+  name: Get Ticket By Id
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{customerServiceUrl}}/api/tickets/{{ticketId}}
+  body: none
+  auth: none
+}

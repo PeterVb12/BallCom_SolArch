@@ -11,53 +11,46 @@ namespace BallCom.Ordering.API.Messaging
     {
         private readonly ILogger<RabbitMQEventConsumer> _logger;
         private readonly IServiceScopeFactory _scopeFactory;
-        private IConnection _connection;
-        private IModel _channel;
-        private string _queueName;
+        private readonly string _hostname;
+        private readonly string _exchangeName = "ballcom-exchange";
+        private readonly string _queueName = "ordering-service-queue";
 
-        public RabbitMQEventConsumer(ILogger<RabbitMQEventConsumer> logger, IServiceScopeFactory scopeFactory)
+        private IConnection? _connection;
+        private IModel? _channel;
+
+        public RabbitMQEventConsumer(
+            ILogger<RabbitMQEventConsumer> logger,
+            IServiceScopeFactory scopeFactory,
+            IConfiguration configuration)
         {
             _logger = logger;
             _scopeFactory = scopeFactory;
-            InitRabbitMQ();
+            _hostname = configuration["RabbitMQ:Host"] ?? "localhost";
         }
 
-        private void InitRabbitMQ()
+        protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            var factory = new ConnectionFactory { HostName = "localhost" };
-            _connection = factory.CreateConnection();
-            _channel = _connection.CreateModel();
+            await TryConnectAsync(stoppingToken);
 
-            string exchangeName = "ballcom-exchange";
-            _channel.ExchangeDeclare(exchange: exchangeName, type: ExchangeType.Fanout);
-
-            _queueName = _channel.QueueDeclare(queue: "ordering-service-queue", 
-                                             durable: true, 
-                                             exclusive: false, 
-                                             autoDelete: false).QueueName;
-
-            _channel.QueueBind(queue: _queueName, exchange: exchangeName, routingKey: "");
-        }
-
-        protected override Task ExecuteAsync(CancellationToken stoppingToken)
-        {
-            stoppingToken.ThrowIfCancellationRequested();
+            if (_channel is null)
+            {
+                return;
+            }
 
             var consumer = new EventingBasicConsumer(_channel);
             consumer.Received += async (model, ea) =>
             {
                 var body = ea.Body.ToArray();
                 var json = Encoding.UTF8.GetString(body);
-                
+
                 _logger.LogInformation("[Ordering Service] Bericht ontvangen via RabbitMQ: {Json} met RoutingKey: {Key}", json, ea.RoutingKey);
 
                 try
                 {
-                    // CASE 1: Nieuw product toegevoegd in Catalogus
                     if (ea.RoutingKey == "ProductAddedEvent")
                     {
                         var productEvent = JsonSerializer.Deserialize<ProductAddedIntegrationEvent>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-                        
+
                         if (productEvent != null)
                         {
                             var scope = _scopeFactory.CreateScope();
@@ -79,24 +72,21 @@ namespace BallCom.Ordering.API.Messaging
                             }
                         }
                     }
-                    // CASE 2: Product bijgewerkt in Catalogus (Nu gekoppeld aan jouw nieuwe ProductUpdatedEvent)
                     else if (ea.RoutingKey == "ProductUpdatedEvent")
                     {
                         var productEvent = JsonSerializer.Deserialize<ProductUpdatedEvent>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-                        
+
                         if (productEvent != null)
                         {
                             var scope = _scopeFactory.CreateScope();
                             var dbContext = scope.ServiceProvider.GetRequiredService<OrderingDbContext>();
 
-                            // Zoek het product lokaal op in de Ordering database
                             var product = dbContext.Products.FirstOrDefault(p => p.Id == productEvent.ProductId);
                             if (product != null)
                             {
-                                // Synchroniseer de lokale gegevens
                                 product.Name = productEvent.Name;
                                 product.Price = productEvent.Price;
-                                
+
                                 await dbContext.SaveChangesAsync();
                                 _logger.LogInformation("[Ordering Service] Product {Name} succesvol BIJGEWERKT in ordering_db!", product.Name);
                             }
@@ -106,7 +96,6 @@ namespace BallCom.Ordering.API.Messaging
                             }
                         }
                     }
-                    // Onbekende of irrelevante events negeren
                     else
                     {
                         _logger.LogInformation("[Ordering Service] Event genegeerd (RoutingKey: {Key}). Niet relevant voor de producttabel.", ea.RoutingKey);
@@ -119,15 +108,40 @@ namespace BallCom.Ordering.API.Messaging
             };
 
             _channel.BasicConsume(queue: _queueName, autoAck: true, consumer: consumer);
+            _logger.LogInformation("[Ordering Service] Consumer luistert op queue '{Queue}'.", _queueName);
+        }
 
-            return Task.CompletedTask;
+        private async Task TryConnectAsync(CancellationToken stoppingToken)
+        {
+            var factory = new ConnectionFactory { HostName = _hostname, DispatchConsumersAsync = false };
+
+            for (var attempt = 1; attempt <= 10 && !stoppingToken.IsCancellationRequested; attempt++)
+            {
+                try
+                {
+                    _connection = factory.CreateConnection();
+                    _channel = _connection.CreateModel();
+
+                    _channel.ExchangeDeclare(exchange: _exchangeName, type: ExchangeType.Fanout);
+                    _channel.QueueDeclare(queue: _queueName, durable: true, exclusive: false, autoDelete: false);
+                    _channel.QueueBind(queue: _queueName, exchange: _exchangeName, routingKey: string.Empty);
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "[Ordering Service] RabbitMQ nog niet bereikbaar (poging {Attempt}/10). Opnieuw over 3s.", attempt);
+                    await Task.Delay(TimeSpan.FromSeconds(3), stoppingToken);
+                }
+            }
+
+            _logger.LogError("[Ordering Service] Kon geen verbinding maken met RabbitMQ. Consumer stopt.");
         }
 
         public override void Dispose()
         {
-            _channel?.Close(); // Sluit de RabbitMQ channel
-            _connection?.Close(); // Sluit de netwerkverbinding
-            base.Dispose(); // Laat de achtergrond service de rest opruimen
+            _channel?.Close();
+            _connection?.Close();
+            base.Dispose();
         }
     }
 }

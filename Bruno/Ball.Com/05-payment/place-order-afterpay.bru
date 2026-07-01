@@ -1,0 +1,35 @@
+meta {
+  name: Place Order (AfterPay flow)
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{orderingUrl}}/api/orders
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "customer": {
+      "email": "afterpay-pay@example.com",
+      "fullName": "AfterPay Payment",
+      "street": "Paystraat 2",
+      "city": "Rotterdam",
+      "postalCode": "3012AB",
+      "country": "NL"
+    },
+    "items": [
+      { "productId": "{{productId}}", "quantity": 1, "price": 0 }
+    ]
+  }
+}
+
+script:post-response {
+  const data = res.getBody();
+  if (data && data.id) {
+    bru.setVar("orderId", data.id);
+    bru.setEnvVar("orderId", data.id);
+  }
+}

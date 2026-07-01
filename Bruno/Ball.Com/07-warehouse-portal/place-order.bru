@@ -1,0 +1,37 @@
+meta {
+  name: Place Order (warehouse portal flow)
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{orderingUrl}}/api/orders
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "customer": {
+      "email": "wh-portal@example.com",
+      "fullName": "Warehouse Portal",
+      "street": "Magazijnweg 1",
+      "city": "Eindhoven",
+      "postalCode": "5611AB",
+      "country": "NL"
+    },
+    "items": [
+      { "productId": "{{productId}}", "quantity": 1, "price": 0 }
+    ]
+  }
+}
+
+script:post-response {
+  const data = res.getBody();
+  if (data && data.id) {
+    bru.setVar("orderId", data.id);
+    bru.setEnvVar("orderId", data.id);
+    bru.setVar("servicePortalOrderId", data.id);
+    bru.setEnvVar("servicePortalOrderId", data.id);
+  }
+}

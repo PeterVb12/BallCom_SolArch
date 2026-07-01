@@ -1,0 +1,28 @@
+meta {
+  name: Register Ticket
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{customerServiceUrl}}/api/tickets
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "customerEmail": "klant@example.com",
+    "subject": "Waar is mijn order?",
+    "question": "Ik heb gisteren besteld maar zie geen update.",
+    "orderId": {{orderId}}
+  }
+}
+
+script:post-response {
+  const data = res.getBody();
+  if (data && data.id) {
+    bru.setVar("ticketId", data.id);
+    bru.setEnvVar("ticketId", data.id);
+  }
+}

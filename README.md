@@ -1,182 +1,100 @@
 # BallCom_SolArch
 
-Microservices-architectuur voor **Ball.com**, een globaliserende retailer. Het systeem
-bestaat uit losse backend microservices en dunne portals (BFF's) die volgens het
-context- en ArchiMate-diagram met elkaar samenwerken via REST en RabbitMQ events.
+Microservices-architectuur voor **Ball.com**. Services communiceren via REST (portals → microservices) en RabbitMQ events (microservices onderling).
 
-Zie [`ARCHITECTURE.md`](ARCHITECTURE.md) voor de toepassing van de 7 architectuurprincipes.
+Zie [`ARCHITECTURE.md`](ARCHITECTURE.md) voor architectuurprincipes.
 
 ## Services & poorten
 
 | Project | Rol | Poort | DB |
 |---------|-----|-------|----|
-| `BallCom.Ordering.API` | Ordering microservice | `5100` | `ordering_db` (5432) |
-| `BallCom.API` | Customer portal (BFF) | `5000` | — |
+| `BallCom.API` | Ball.com portal (BFF) | `5000` | — |
+| `BallCom.Ordering.API` | Order microservice | `5100` | `ordering_db` (5432) |
 | `BallCom.Catalog.API` | Catalogus microservice | `5200` | `catalog_db` (5433) |
 | `BallCom.Supplier.API` | Supplier portal (BFF) | `5300` | — |
 | `BallCom.Payment.API` | Payment microservice | `5400` | `payment_db` (5434) |
-| `BallCom.Warehouse.API` | **Warehouse microservice** | `5500` | `warehouse_db` (5435) |
-| `BallCom.WarehousePortal.API` | **Warehouse portal (BFF)** | `5600` | — |
+| `BallCom.Warehouse.API` | Warehouse microservice | `5500` | `warehouse_db` (5435) |
+| `BallCom.WarehousePortal.API` | Warehouse portal (BFF) | `5600` | — |
+| `BallCom.CustomerService.API` | **Customer service** microservice | `5700` | `customer_service_db` (5436) |
+| `BallCom.CustomerServicePortal.API` | Customer service portal (BFF) | `5800` | — |
+| `BallCom.Logistics.API` | **Logistics** microservice | `5900` | `logistics_db` (5437) |
 
-## 1. Start de infrastructuur (Postgres + RabbitMQ)
+## Event-keten
 
-```bash
-docker-compose up -d
+```
+Catalog → Ordering → Payment → Warehouse → Logistics
+                              ↘ Customer Service (tickets + status via REST)
+Ball.com portal → Ordering + Logistics (F12 order + delivery status)
+Customer service portal → Customer Service + Logistics
 ```
 
-Dit start:
-- `rabbitmq` — message broker, dashboard op http://localhost:15672 (login: `guest` / `guest`)
-- `ordering_db` — Postgres voor Ordering op poort `5432`
-- `catalog_db` — Postgres voor Catalog op poort `5433`
-- `payment_db` — Postgres voor Payment op poort `5434`
-- `warehouse_db` — Postgres voor Warehouse op poort `5435`
+## Starten
 
-## 2. Start de services
+### Optie A — alles in Docker (aanbevolen)
 
-Elke service in een eigen terminal:
+Zorg dat Docker Desktop draait, daarna:
 
 ```bash
-# Catalogus microservice
-cd BallCom.Catalog.API
-dotnet run --urls="http://localhost:5200"
-
-# Supplier portal (BFF -> Catalog)
-cd BallCom.Supplier.API
-dotnet run --urls="http://localhost:5300"
-
-# Ordering microservice
-cd BallCom.Ordering.API
-dotnet run --urls="http://localhost:5100"
-
-# Payment microservice (consumeert OrderPlacedEvent)
-cd BallCom.Payment.API
-dotnet run --urls="http://localhost:5400"
-
-# Warehouse microservice (consumeert PaymentCompletedEvent)
-cd BallCom.Warehouse.API
-dotnet run --urls="http://localhost:5500"
-
-# Warehouse portal (BFF -> Warehouse)
-cd BallCom.WarehousePortal.API
-dotnet run --urls="http://localhost:5600"
-
-# Customer portal (BFF -> Ordering + Payment)
-cd BallCom.API
-dotnet run --urls="http://localhost:5000"
+docker compose up --build -d
 ```
 
-Bij startup roept elke microservice `EnsureCreated()` aan, waardoor de tabellen
-(read models + event store) automatisch worden aangemaakt.
+Dit start RabbitMQ, alle PostgreSQL-databases **en alle 10 API-services**. Host-poorten blijven gelijk (5000–5900); containers praten intern via het `ballcom_network` (bijv. `http://ordering-api:8080/`).
 
-## 3. Testen (Catalogus end-to-end)
+| Modus | Database host | RabbitMQ host | Service-URLs |
+|-------|---------------|---------------|--------------|
+| Lokaal (`dotnet run`) | `localhost` + poort 5432–5437 | `localhost` | `http://localhost:5100/` enz. |
+| Docker | `ordering_db`, `catalog_db`, … | `rabbitmq` | `http://ordering-api:8080/` enz. |
 
-De catalogus is alleen muteerbaar door **vertrouwde suppliers**. De flow is dus:
+Configuratie zit in `appsettings.json` (localhost) en wordt in `docker-compose.yml` overschreven via environment variables (`ConnectionStrings__Default`, `RabbitMQ__Host`, `Services__Ordering`, …).
 
-1. **Registreer een supplier** (via supplier portal):
+### Optie B — infrastructuur in Docker, APIs lokaal
 
 ```bash
-POST http://localhost:5300/api/supplier/register
-{ "name": "ACME Supplies", "contactEmail": "sales@acme.com" }
+docker compose up -d rabbitmq ordering_db catalog_db payment_db warehouse_db customer_service_db logistics_db
 ```
 
-   → response bevat de `id` (supplierId).
-
-2. **Voeg een product toe** met die supplierId:
+Start daarna **10 .NET services** (zie poorten hierboven):
 
 ```bash
-POST http://localhost:5300/api/supplier/products
-{ "name": "Voetbal", "description": "Maat 5", "price": 24.99, "stock": 100, "supplierId": "<supplierId>" }
+cd BallCom.Ordering.API && dotnet run --urls="http://localhost:5100"
+cd BallCom.Catalog.API && dotnet run --urls="http://localhost:5200"
+# … overige services op de bijbehorende poort
 ```
 
-3. **Bekijk de producten** (de set waaruit klanten bestellen):
+> **Let op:** stop draaiende services vóór `dotnet build` als bestanden gelocked zijn.
 
-```bash
-GET http://localhost:5300/api/supplier/products
-GET http://localhost:5200/api/products
+## Requirements mapping (PDF)
+
+| ID | Implementatie |
+|----|---------------|
+| F05 | Klantgegevens bij `POST /api/orders` (Ordering) |
+| F09 | Goedkoopste carrier in Logistics (`CarrierSelectionService`) |
+| F12 | `GET /api/customer/orders/{id}/status` (Ball.com portal) |
+| F13 | Orderstatus: Ordering `/status`; levering: Logistics `/delivery-status` |
+| F14–F15 | Tickets in Customer Service + portal |
+| NF15 | `carrierQuotesAudit` op shipment |
+| NF16 | `CarrierStatusProvider` mock interface |
+
+## Bruno
+
+Open `Bruno/Ball.Com` en kies environment **Local** (hybride/lokaal) of **Docker** (`docker compose up --build -d`). Beide gebruiken dezelfde localhost-poorten.
+
+Voeg bij orders een `customer`-object toe:
+
+```json
+{
+  "customer": {
+    "email": "klant@example.com",
+    "fullName": "Jan Klant",
+    "street": "Hoofdstraat 1",
+    "city": "Amsterdam",
+    "postalCode": "1011AB",
+    "country": "NL"
+  },
+  "items": [{ "productId": "{{productId}}", "quantity": 2, "price": 0 }]
+}
 ```
-
-## 4. Testen (Payment end-to-end)
-
-De Payment Service maakt automatisch een transactie aan zodra een order geplaatst is.
-De volledige keten:
-
-1. **Plaats een order** (via customer portal → Ordering). Ordering publiceert
-   `OrderPlacedEvent` op `ballcom-exchange`:
-
-```bash
-POST http://localhost:5000/api/customer/orders
-{ "items": [ { "productId": "BOEK-001", "quantity": 2, "price": 19.99 } ] }
-```
-
-2. **Payment consumeert het event** en maakt automatisch een `Transaction` met status
-   `PENDING` aan. Controleer:
-
-```bash
-GET http://localhost:5000/api/customer/payments/{orderId}
-```
-
-3a. **ForwardPay** — meteen betalen (status wordt direct `PAID`):
-
-```bash
-POST http://localhost:5000/api/customer/payments
-{ "orderId": 1, "paymentMethod": "ForwardPay" }
-```
-
-3b. **AfterPay** — later betalen (blijft `PENDING`, daarna afronden):
-
-```bash
-POST http://localhost:5000/api/customer/payments
-{ "orderId": 1, "paymentMethod": "AfterPay" }
-
-POST http://localhost:5000/api/customer/payments/1/complete
-```
-
-4. Bij `PAID` publiceert Payment een `PaymentCompletedEvent` op `ballcom-exchange`,
-   zichtbaar in het RabbitMQ-dashboard (release naar de Warehouse Service).
-
-**Idempotency:** een dubbel ontvangen `OrderPlacedEvent` maakt geen tweede transactie
-aan (unieke index op `OrderId` + check in de consumer).
-
-**Test-failure:** stuur `"simulateFailure": true` mee bij `POST /api/payments`
-(rechtstreeks op 5400) of `?simulateFailure=true` bij `/complete` → status `FAILED`
-en een `PaymentFailedEvent`.
-
-## 5. Testen (Warehouse end-to-end)
-
-Zodra een betaling is afgerond, maakt de Warehouse Service automatisch een pick list aan.
-Vervolg op de betaal-flow hierboven:
-
-1. Payment publiceert `PaymentCompletedEvent`. **Warehouse consumeert dit** en maakt
-   automatisch een `PickList` met status `RELEASED` aan. De orderregels worden via de
-   Ordering API opgehaald (Content Enricher). Controleer:
-
-```bash
-GET http://localhost:5600/api/warehouse/picklists
-GET http://localhost:5500/api/picklists/order/{orderId}
-```
-
-2. **Doorloop de pick flow** (via warehouse portal, `{id}` = PickList-Guid):
-
-```bash
-POST http://localhost:5600/api/warehouse/picklists/{id}/start-picking      # RELEASED -> PICKING
-POST http://localhost:5600/api/warehouse/picklists/{id}/complete-picking   # PICKING  -> PICKED
-POST http://localhost:5600/api/warehouse/picklists/{id}/pack               # PICKED   -> PACKED
-POST http://localhost:5600/api/warehouse/picklists/{id}/ready              # PACKED   -> READY_FOR_SHIPMENT
-```
-
-3. Bij `READY_FOR_SHIPMENT` publiceert Warehouse een `PackageReadyEvent` op
-   `ballcom-exchange`, zichtbaar in het RabbitMQ-dashboard (release naar Logistics).
-
-**Statusvalidatie:** een overgang buiten de volgorde (bijv. `pack` zonder `PICKED`)
-geeft `409 Conflict`. **Idempotency:** een dubbel ontvangen `PaymentCompletedEvent`
-maakt geen tweede pick list aan (unieke index op `OrderId` + check in de consumer).
-
-## Postman
-
-Importeer `Postman/Ball.Com.postman_collection.json` — de mappen **Catalog Microservice**,
-**Supplier Portal**, **Payment Microservice**, **Customer Portal - Payments**,
-**Warehouse Microservice** en **Warehouse Portal** bevatten kant-en-klare requests.
 
 ## RabbitMQ dashboard
 
-http://localhost:15672 — login met `guest` / `guest`
+http://localhost:15672 — `guest` / `guest`

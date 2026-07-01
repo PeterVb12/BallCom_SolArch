@@ -1,0 +1,11 @@
+meta {
+  name: Get Order Status (Ball.com portal F12)
+  type: http
+  seq: 7
+}
+
+get {
+  url: {{customerPortalUrl}}/api/customer/orders/{{orderId}}/status
+  body: none
+  auth: none
+}

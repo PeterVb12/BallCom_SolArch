@@ -1,0 +1,18 @@
+meta {
+  name: Start Payment - AfterPay
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{paymentUrl}}/api/payments
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "orderId": {{orderId}},
+    "paymentMethod": "AfterPay"
+  }
+}

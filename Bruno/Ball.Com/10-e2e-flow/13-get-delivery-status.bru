@@ -1,0 +1,11 @@
+meta {
+  name: 13 Get Delivery Status
+  type: http
+  seq: 14
+}
+
+get {
+  url: {{logisticsUrl}}/api/shipments/order/{{orderId}}/delivery-status
+  body: none
+  auth: none
+}

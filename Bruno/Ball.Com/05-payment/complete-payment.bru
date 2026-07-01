@@ -1,0 +1,11 @@
+meta {
+  name: Complete Payment (AfterPay)
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{paymentUrl}}/api/payments/{{orderId}}/complete
+  body: none
+  auth: none
+}

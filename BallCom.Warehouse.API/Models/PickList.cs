@@ -21,5 +21,6 @@ namespace BallCom.Warehouse.API.Models
         public const string Picked = "PICKED";
         public const string Packed = "PACKED";
         public const string ReadyForShipment = "READY_FOR_SHIPMENT";
+        public const string Cancelled = "CANCELLED";
     }
 }

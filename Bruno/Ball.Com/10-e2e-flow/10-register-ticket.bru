@@ -1,0 +1,28 @@
+meta {
+  name: 10 Register Service Ticket
+  type: http
+  seq: 11
+}
+
+post {
+  url: {{customerServicePortalUrl}}/api/service/tickets
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "customerEmail": "klant@example.com",
+    "subject": "Waar is mijn order?",
+    "question": "Wanneer wordt mijn pakket verzonden?",
+    "orderId": {{orderId}}
+  }
+}
+
+script:post-response {
+  const data = res.getBody();
+  if (data && data.id) {
+    bru.setVar("ticketId", data.id);
+    bru.setEnvVar("ticketId", data.id);
+  }
+}

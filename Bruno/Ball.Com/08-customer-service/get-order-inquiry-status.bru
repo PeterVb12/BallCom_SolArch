@@ -1,0 +1,11 @@
+meta {
+  name: Get Order Inquiry Status (F15)
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{customerServiceUrl}}/api/inquiries/orders/{{orderId}}/status
+  body: none
+  auth: none
+}

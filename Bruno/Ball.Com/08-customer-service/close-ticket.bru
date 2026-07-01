@@ -1,0 +1,11 @@
+meta {
+  name: Close Ticket
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{customerServiceUrl}}/api/tickets/{{ticketId}}/close
+  body: none
+  auth: none
+}

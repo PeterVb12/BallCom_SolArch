@@ -1,0 +1,18 @@
+meta {
+  name: Answer Ticket (via portal)
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{customerServicePortalUrl}}/api/service/tickets/{{ticketId}}/answer
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "answer": "Uw order wordt momenteel gepickt in het warehouse.",
+    "answeredBy": "{{employeeName}}"
+  }
+}

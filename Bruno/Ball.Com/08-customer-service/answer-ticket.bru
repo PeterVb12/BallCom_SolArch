@@ -1,0 +1,18 @@
+meta {
+  name: Answer Ticket
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{customerServiceUrl}}/api/tickets/{{ticketId}}/answer
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "answer": "Uw order wordt momenteel gepickt in het warehouse.",
+    "answeredBy": "{{employeeName}}"
+  }
+}

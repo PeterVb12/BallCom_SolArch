@@ -8,9 +8,8 @@ var builder = WebApplication.CreateBuilder(args);
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 
-// Connectie naar de eigen Postgres container van de Payment Service in Docker.
-// Eigen database (payment_db) op poort 5434 om conflicten met andere db's te vermijden.
-var connectionString = "Host=localhost;Port=5434;Database=payment_db;Username=payment_user;Password=payment_password";
+var connectionString = builder.Configuration.GetConnectionString("Default")
+    ?? throw new InvalidOperationException("ConnectionStrings:Default is not configured.");
 builder.Services.AddDbContext<PaymentDbContext>(options =>
     options.UseNpgsql(connectionString));
 

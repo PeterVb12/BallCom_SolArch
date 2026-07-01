@@ -1,0 +1,11 @@
+meta {
+  name: Get Order Inquiry Status (via portal)
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{customerServicePortalUrl}}/api/service/inquiries/orders/{{servicePortalOrderId}}/status
+  body: none
+  auth: none
+}

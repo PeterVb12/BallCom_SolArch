@@ -7,7 +7,12 @@ namespace BallCom.Ordering.API.Messaging
 {
     public class RabbitMQEventPublisher : IEventPublisher
     {
-        private readonly string _hostname = "localhost";
+        private readonly string _hostname;
+
+        public RabbitMQEventPublisher(IConfiguration configuration)
+        {
+            _hostname = configuration["RabbitMQ:Host"] ?? "localhost";
+        }
 
         public void Publish<T>(T @event)
         {

@@ -1,0 +1,11 @@
+meta {
+  name: Get Shipment (via portal)
+  type: http
+  seq: 9
+}
+
+get {
+  url: {{customerServicePortalUrl}}/api/service/delivery/orders/{{servicePortalOrderId}}
+  body: none
+  auth: none
+}

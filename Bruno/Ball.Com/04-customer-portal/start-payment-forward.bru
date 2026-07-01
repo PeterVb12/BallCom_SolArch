@@ -1,0 +1,18 @@
+meta {
+  name: Start Payment - ForwardPay (via portal)
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{customerPortalUrl}}/api/customer/payments
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "orderId": {{orderId}},
+    "paymentMethod": "ForwardPay"
+  }
+}

@@ -1,0 +1,41 @@
+meta {
+  name: Wait For Shipment (logistics async)
+  type: http
+  seq: 10
+}
+
+get {
+  url: {{logisticsUrl}}/api/shipments/order/{{orderId}}
+  body: none
+  auth: none
+}
+
+script:pre-request {
+  const orderId = bru.getVar("orderId") || bru.getEnvVar("orderId");
+  const logisticsUrl = bru.getEnvVar("logisticsUrl");
+  const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+  for (let attempt = 1; attempt <= 20; attempt++) {
+    const response = await new Promise((resolve, reject) => {
+      bru.sendRequest({
+        url: `${logisticsUrl}/api/shipments/order/${orderId}`,
+        method: "GET",
+        headers: { Accept: "application/json" }
+      }, (err, res) => (err ? reject(err) : resolve(res)));
+    });
+
+    if (response.status === 200) {
+      return;
+    }
+
+    await sleep(1000);
+  }
+
+  throw new Error(`Shipment voor order ${orderId} niet aangemaakt na 20s.`);
+}
+
+tests {
+  test("shipment exists", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+}

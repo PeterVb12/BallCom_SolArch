@@ -1,17 +1,20 @@
 version: "3.8"
 
 services:
-  # 1.  Message Broker (RabbitMQ)
   rabbitmq:
     image: rabbitmq:3-management
     container_name: ballcom_rabbitmq
     ports:
-      - "5672:5672" # Dit is de poort waar je .NET code straks berichten naartoe stuurt
-      - "15672:15672" # Dit is het dashboard waar je in de browser naar kunt kijken
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     networks:
       - ballcom_network
 
-  # 2. De database voor de Ordering Service
   ordering_db:
     image: postgres:latest
     container_name: ballcom_ordering_db
@@ -20,11 +23,15 @@ services:
       POSTGRES_PASSWORD: ballcom_password
       POSTGRES_DB: ordering_db
     ports:
-      - "5432:5432" # De poort van je database
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ballcom_user -d ordering_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
     networks:
       - ballcom_network
 
-  # 3. De database voor de Catalog Service (eigen database per microservice)
   catalog_db:
     image: postgres:latest
     container_name: ballcom_catalog_db
@@ -33,11 +40,15 @@ services:
       POSTGRES_PASSWORD: catalog_password
       POSTGRES_DB: catalog_db
     ports:
-      - "5433:5432" # Eigen poort (5433) om conflict met ordering_db (5432) te vermijden
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U catalog_user -d catalog_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
     networks:
       - ballcom_network
 
-  # 4. De database voor de Payment Service (eigen database per microservice)
   payment_db:
     image: postgres:latest
     container_name: ballcom_payment_db
@@ -46,11 +57,15 @@ services:
       POSTGRES_PASSWORD: payment_password
       POSTGRES_DB: payment_db
     ports:
-      - "5434:5432" # Eigen poort (5434) om conflict met andere databases te vermijden
+      - "5434:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U payment_user -d payment_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
     networks:
       - ballcom_network
 
-  # 5. De database voor de Warehouse Service (eigen database per microservice)
   warehouse_db:
     image: postgres:latest
     container_name: ballcom_warehouse_db
@@ -59,7 +74,244 @@ services:
       POSTGRES_PASSWORD: warehouse_password
       POSTGRES_DB: warehouse_db
     ports:
-      - "5435:5432" # Eigen poort (5435) om conflict met andere databases te vermijden
+      - "5435:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U warehouse_user -d warehouse_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - ballcom_network
+
+  customer_service_db:
+    image: postgres:latest
+    container_name: ballcom_customer_service_db
+    environment:
+      POSTGRES_USER: customer_service_user
+      POSTGRES_PASSWORD: customer_service_password
+      POSTGRES_DB: customer_service_db
+    ports:
+      - "5436:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U customer_service_user -d customer_service_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - ballcom_network
+
+  logistics_db:
+    image: postgres:latest
+    container_name: ballcom_logistics_db
+    environment:
+      POSTGRES_USER: logistics_user
+      POSTGRES_PASSWORD: logistics_password
+      POSTGRES_DB: logistics_db
+    ports:
+      - "5437:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U logistics_user -d logistics_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - ballcom_network
+
+  ordering-api:
+    build:
+      context: .
+      dockerfile: BallCom.Ordering.API/Dockerfile
+    container_name: ballcom_ordering_api
+    ports:
+      - "5100:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__Default: "Host=ordering_db;Port=5432;Database=ordering_db;Username=ballcom_user;Password=ballcom_password"
+      RabbitMQ__Host: rabbitmq
+    depends_on:
+      ordering_db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - ballcom_network
+
+  catalog-api:
+    build:
+      context: .
+      dockerfile: BallCom.Catalog.API/Dockerfile
+    container_name: ballcom_catalog_api
+    ports:
+      - "5200:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__Default: "Host=catalog_db;Port=5432;Database=catalog_db;Username=catalog_user;Password=catalog_password"
+      RabbitMQ__Host: rabbitmq
+    depends_on:
+      catalog_db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - ballcom_network
+
+  payment-api:
+    build:
+      context: .
+      dockerfile: BallCom.Payment.API/Dockerfile
+    container_name: ballcom_payment_api
+    ports:
+      - "5400:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__Default: "Host=payment_db;Port=5432;Database=payment_db;Username=payment_user;Password=payment_password"
+      RabbitMQ__Host: rabbitmq
+    depends_on:
+      payment_db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      ordering-api:
+        condition: service_started
+    networks:
+      - ballcom_network
+
+  warehouse-api:
+    build:
+      context: .
+      dockerfile: BallCom.Warehouse.API/Dockerfile
+    container_name: ballcom_warehouse_api
+    ports:
+      - "5500:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__Default: "Host=warehouse_db;Port=5432;Database=warehouse_db;Username=warehouse_user;Password=warehouse_password"
+      RabbitMQ__Host: rabbitmq
+      Services__Ordering: "http://ordering-api:8080/"
+    depends_on:
+      warehouse_db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      ordering-api:
+        condition: service_started
+    networks:
+      - ballcom_network
+
+  logistics-api:
+    build:
+      context: .
+      dockerfile: BallCom.Logistics.API/Dockerfile
+    container_name: ballcom_logistics_api
+    ports:
+      - "5900:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__Default: "Host=logistics_db;Port=5432;Database=logistics_db;Username=logistics_user;Password=logistics_password"
+      RabbitMQ__Host: rabbitmq
+      Services__Ordering: "http://ordering-api:8080/"
+    depends_on:
+      logistics_db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      ordering-api:
+        condition: service_started
+    networks:
+      - ballcom_network
+
+  customer-service-api:
+    build:
+      context: .
+      dockerfile: BallCom.CustomerService.API/Dockerfile
+    container_name: ballcom_customer_service_api
+    ports:
+      - "5700:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__Default: "Host=customer_service_db;Port=5432;Database=customer_service_db;Username=customer_service_user;Password=customer_service_password"
+      Services__Ordering: "http://ordering-api:8080/"
+      Services__Logistics: "http://logistics-api:8080/"
+    depends_on:
+      customer_service_db:
+        condition: service_healthy
+      ordering-api:
+        condition: service_started
+      logistics-api:
+        condition: service_started
+    networks:
+      - ballcom_network
+
+  ballcom-portal:
+    build:
+      context: .
+      dockerfile: BallCom.API/Dockerfile
+    container_name: ballcom_portal
+    ports:
+      - "5000:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      Services__Ordering: "http://ordering-api:8080/"
+      Services__Payment: "http://payment-api:8080/"
+      Services__Logistics: "http://logistics-api:8080/"
+    depends_on:
+      ordering-api:
+        condition: service_started
+      payment-api:
+        condition: service_started
+      logistics-api:
+        condition: service_started
+    networks:
+      - ballcom_network
+
+  supplier-portal:
+    build:
+      context: .
+      dockerfile: BallCom.Supplier.API/Dockerfile
+    container_name: ballcom_supplier_portal
+    ports:
+      - "5300:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      Services__Catalog: "http://catalog-api:8080/"
+    depends_on:
+      catalog-api:
+        condition: service_started
+    networks:
+      - ballcom_network
+
+  warehouse-portal:
+    build:
+      context: .
+      dockerfile: BallCom.WarehousePortal.API/Dockerfile
+    container_name: ballcom_warehouse_portal
+    ports:
+      - "5600:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      Services__Warehouse: "http://warehouse-api:8080/"
+    depends_on:
+      warehouse-api:
+        condition: service_started
+    networks:
+      - ballcom_network
+
+  customer-service-portal:
+    build:
+      context: .
+      dockerfile: BallCom.CustomerServicePortal.API/Dockerfile
+    container_name: ballcom_customer_service_portal
+    ports:
+      - "5800:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      Services__CustomerService: "http://customer-service-api:8080/"
+      Services__Logistics: "http://logistics-api:8080/"
+    depends_on:
+      customer-service-api:
+        condition: service_started
+      logistics-api:
+        condition: service_started
     networks:
       - ballcom_network
 

@@ -1,0 +1,11 @@
+meta {
+  name: Start Picking (via portal)
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{warehousePortalUrl}}/api/warehouse/picklists/{{pickListId}}/start-picking
+  body: none
+  auth: none
+}

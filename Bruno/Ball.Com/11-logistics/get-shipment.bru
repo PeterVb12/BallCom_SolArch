@@ -1,0 +1,11 @@
+meta {
+  name: Get Shipment By OrderId
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{logisticsUrl}}/api/shipments/order/{{orderId}}
+  body: none
+  auth: none
+}

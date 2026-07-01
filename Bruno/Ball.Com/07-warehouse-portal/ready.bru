@@ -1,0 +1,11 @@
+meta {
+  name: Ready (via portal)
+  type: http
+  seq: 8
+}
+
+post {
+  url: {{warehousePortalUrl}}/api/warehouse/picklists/{{pickListId}}/ready
+  body: none
+  auth: none
+}

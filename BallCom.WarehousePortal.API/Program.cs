@@ -4,7 +4,7 @@ builder.Services.AddOpenApi();
 
 builder.Services.AddHttpClient("WarehouseService", client =>
 {
-    client.BaseAddress = new Uri("http://localhost:5500/");
+    client.BaseAddress = new Uri(builder.Configuration["Services:Warehouse"] ?? "http://localhost:5500/");
 });
 
 builder.Services.AddControllers();

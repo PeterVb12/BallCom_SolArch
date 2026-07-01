@@ -1,0 +1,11 @@
+meta {
+  name: 09 Ready For Shipment
+  type: http
+  seq: 9
+}
+
+post {
+  url: {{warehousePortalUrl}}/api/warehouse/picklists/{{pickListId}}/ready
+  body: none
+  auth: none
+}

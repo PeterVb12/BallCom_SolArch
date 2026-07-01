@@ -13,7 +13,7 @@ namespace BallCom.Payment.API.Messaging
     {
         private readonly IServiceScopeFactory _scopeFactory;
         private readonly ILogger<OrderPlacedEventConsumer> _logger;
-        private readonly string _hostname = "localhost";
+        private readonly string _hostname;
         private readonly string _exchangeName = "ballcom-exchange";
         private readonly string _queueName = "payment.order-placed";
 
@@ -21,10 +21,12 @@ namespace BallCom.Payment.API.Messaging
         private IModel? _channel;
 
         public OrderPlacedEventConsumer(IServiceScopeFactory scopeFactory,
-                                        ILogger<OrderPlacedEventConsumer> logger)
+                                        ILogger<OrderPlacedEventConsumer> logger,
+                                        IConfiguration configuration)
         {
             _scopeFactory = scopeFactory;
             _logger = logger;
+            _hostname = configuration["RabbitMQ:Host"] ?? "localhost";
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
