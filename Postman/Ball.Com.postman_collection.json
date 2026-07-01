@@ -1,10 +1,8 @@
 {
   "info": {
-    "_postman_id": "259f04f7-b996-46d6-821d-0cdc19fef5df",
     "name": "Ball.Com",
     "description": "# 🚀 Get started here\n\nThis template guides you through CRUD operations (GET, POST, PUT, DELETE), variables, and tests.\n\n## 🔖 **How to use this template**\n\n#### **Step 1: Send requests**\n\nRESTful APIs allow you to perform CRUD operations using the POST, GET, PUT, and DELETE HTTP methods.\n\nThis collection contains each of these [request](https://learning.postman.com/docs/sending-requests/requests/) types. Open each request and click \"Send\" to see what happens.\n\n#### **Step 2: View responses**\n\nObserve the response tab for status code (200 OK), response time, and size.\n\n#### **Step 3: Send new Body data**\n\nUpdate or add new data in \"Body\" in the POST request. Typically, Body data is also used in PUT request.\n\n```\n{\n    \"name\": \"Add your name in the body\"\n}\n\n ```\n\n#### **Step 4: Update the variable**\n\nVariables enable you to store and reuse values in Postman. We have created a [variable](https://learning.postman.com/docs/sending-requests/variables/) called `base_url` with the sample request [https://postman-api-learner.glitch.me](https://postman-api-learner.glitch.me). Replace it with your API endpoint to customize this collection.\n\n#### **Step 5: Add tests in the \"Scripts\" tab**\n\nAdding tests to your requests can help you confirm that your API is working as expected. You can write test scripts in JavaScript and view the output in the \"Test Results\" tab.\n\n<img src=\"https://content.pstmn.io/fa30ea0a-373d-4545-a668-e7b283cca343/aW1hZ2UucG5n\" alt=\"\" height=\"1530\" width=\"2162\">\n\n## 💪 Pro tips\n\n- Use folders to group related requests and organize the collection.\n    \n- Add more [scripts](https://learning.postman.com/docs/writing-scripts/intro-to-scripts/) to verify if the API works as expected and execute workflows.\n    \n\n## 💡Related templates\n\n[API testing basics](https://go.postman.co/redirect/workspace?type=personal&collectionTemplateId=e9a37a28-055b-49cd-8c7e-97494a21eb54&sourceTemplateId=ddb19591-3097-41cf-82af-c84273e56719)  \n[API documentation](https://go.postman.co/redirect/workspace?type=personal&collectionTemplateId=e9c28f47-1253-44af-a2f3-20dce4da1f18&sourceTemplateId=ddb19591-3097-41cf-82af-c84273e56719)  \n[Authorization methods](https://go.postman.co/redirect/workspace?type=personal&collectionTemplateId=31a9a6ed-4cdf-4ced-984c-d12c9aec1c27&sourceTemplateId=ddb19591-3097-41cf-82af-c84273e56719)",
-    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-    "_exporter_id": "33776673"
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
     {
@@ -12,23 +10,25 @@
       "item": [
         {
           "name": "Post data",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"Successful POST request\", function () {",
-                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
-                  "});",
-                  ""
-                ]
-              }
-            }
-          ],
           "request": {
             "method": "POST",
             "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "This is a POST request, submitting data to an API via the request body. This request submits JSON data, and the data is reflected in the response.\n\nA successful POST request typically returns a `200 OK` or `201 Created` response code.",
+            "url": {
+              "raw": "{{base_url}}/info",
+              "protocol": "",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "info"
+              ],
+              "query": [],
+              "variable": []
+            },
             "body": {
               "mode": "raw",
               "raw": "{\n\t\"name\": \"Add your name in the body\"\n}",
@@ -37,19 +37,23 @@
                   "language": "json"
                 }
               }
-            },
-            "url": {
-              "raw": "{{base_url}}/info",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "info"
-              ]
-            },
-            "description": "This is a POST request, submitting data to an API via the request body. This request submits JSON data, and the data is reflected in the response.\n\nA successful POST request typically returns a `200 OK` or `201 Created` response code."
+            }
           },
-          "response": []
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {},
+                "exec": [
+                  "pm.test(\"Successful POST request\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});"
+                ]
+              }
+            }
+          ]
         }
       ]
     },
@@ -57,10 +61,27 @@
       "name": "Order Microservice",
       "item": [
         {
-          "name": "New Request",
+          "name": "Create Order",
           "request": {
             "method": "POST",
             "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "",
+            "url": {
+              "raw": "http://localhost:5100/api/orders",
+              "protocol": "http",
+              "host": [
+                "localhost:5100"
+              ],
+              "path": [
+                "api",
+                "orders"
+              ],
+              "query": [],
+              "variable": []
+            },
             "body": {
               "mode": "raw",
               "raw": "{\r\n  \"items\": [\r\n    { \"productId\": \"BOEK-001\", \"quantity\": 2, \"price\": 19.99 },\r\n    { \"productId\": \"SPOED-002\", \"quantity\": 1, \"price\": 5.50 }\r\n  ]\r\n}",
@@ -69,21 +90,8 @@
                   "language": "json"
                 }
               }
-            },
-            "url": {
-              "raw": "http://localhost:5100/api/orders",
-              "protocol": "http",
-              "host": [
-                "localhost"
-              ],
-              "port": "5100",
-              "path": [
-                "api",
-                "orders"
-              ]
             }
-          },
-          "response": []
+          }
         }
       ]
     },
@@ -95,105 +103,198 @@
           "request": {
             "method": "POST",
             "header": [],
-            "body": {
-              "mode": "raw",
-              "raw": "{\r\n  \"name\": \"ACME Supplies\",\r\n  \"contactEmail\": \"sales@acme.com\"\r\n}",
-              "options": { "raw": { "language": "json" } }
+            "auth": {
+              "type": "noauth"
             },
+            "description": "",
             "url": {
               "raw": "http://localhost:5200/api/suppliers",
               "protocol": "http",
-              "host": [ "localhost" ],
-              "port": "5200",
-              "path": [ "api", "suppliers" ]
+              "host": [
+                "localhost:5200"
+              ],
+              "path": [
+                "api",
+                "suppliers"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"name\": \"ACME Supplies\",\r\n  \"contactEmail\": \"sales@acme.com\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             }
-          },
-          "response": []
+          }
         },
         {
           "name": "Get Suppliers",
           "request": {
             "method": "GET",
             "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "",
             "url": {
               "raw": "http://localhost:5200/api/suppliers",
               "protocol": "http",
-              "host": [ "localhost" ],
-              "port": "5200",
-              "path": [ "api", "suppliers" ]
+              "host": [
+                "localhost:5200"
+              ],
+              "path": [
+                "api",
+                "suppliers"
+              ],
+              "query": [],
+              "variable": []
             }
-          },
-          "response": []
+          }
         },
         {
           "name": "Add Product",
           "request": {
             "method": "POST",
             "header": [],
-            "body": {
-              "mode": "raw",
-              "raw": "{\r\n  \"name\": \"Voetbal\",\r\n  \"description\": \"Maat 5\",\r\n  \"price\": 24.99,\r\n  \"stock\": 100,\r\n  \"supplierId\": \"REPLACE-WITH-SUPPLIER-ID\"\r\n}",
-              "options": { "raw": { "language": "json" } }
+            "auth": {
+              "type": "noauth"
             },
+            "description": "",
             "url": {
               "raw": "http://localhost:5200/api/products",
               "protocol": "http",
-              "host": [ "localhost" ],
-              "port": "5200",
-              "path": [ "api", "products" ]
+              "host": [
+                "localhost:5200"
+              ],
+              "path": [
+                "api",
+                "products"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Voetbal\",\n  \"description\": \"Maat 5\",\n  \"price\": 24.99,\n  \"stock\": 100,\n  \"supplierId\": \"f1da847c-797b-4f42-ac40-0957331a3039\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             }
-          },
-          "response": []
+          }
         },
         {
           "name": "Get Products",
           "request": {
             "method": "GET",
             "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "",
             "url": {
               "raw": "http://localhost:5200/api/products",
               "protocol": "http",
-              "host": [ "localhost" ],
-              "port": "5200",
-              "path": [ "api", "products" ]
+              "host": [
+                "localhost:5200"
+              ],
+              "path": [
+                "api",
+                "products"
+              ],
+              "query": [],
+              "variable": []
             }
-          },
-          "response": []
+          }
         },
         {
           "name": "Get Product By Id",
           "request": {
             "method": "GET",
             "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "",
             "url": {
-              "raw": "http://localhost:5200/api/products/REPLACE-WITH-PRODUCT-ID",
+              "raw": "http://localhost:5200/api/products/7a52e651-c99f-4b8e-8637-d232ae362aab",
               "protocol": "http",
-              "host": [ "localhost" ],
-              "port": "5200",
-              "path": [ "api", "products", "REPLACE-WITH-PRODUCT-ID" ]
+              "host": [
+                "localhost:5200"
+              ],
+              "path": [
+                "api",
+                "products",
+                "7a52e651-c99f-4b8e-8637-d232ae362aab"
+              ],
+              "query": [],
+              "variable": []
             }
-          },
-          "response": []
+          }
         },
         {
           "name": "Update Product",
           "request": {
             "method": "PUT",
             "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "",
+            "url": {
+              "raw": "http://localhost:5200/api/products/1808d4c7-8ce3-463a-906e-68b2a409b85f",
+              "protocol": "http",
+              "host": [
+                "localhost:5200"
+              ],
+              "path": [
+                "api",
+                "products",
+                "1808d4c7-8ce3-463a-906e-68b2a409b85f"
+              ],
+              "query": [],
+              "variable": []
+            },
             "body": {
               "mode": "raw",
               "raw": "{\r\n  \"name\": \"Voetbal Pro\",\r\n  \"description\": \"Maat 5 wedstrijdbal\",\r\n  \"price\": 29.99,\r\n  \"stock\": 80\r\n}",
-              "options": { "raw": { "language": "json" } }
-            },
-            "url": {
-              "raw": "http://localhost:5200/api/products/REPLACE-WITH-PRODUCT-ID",
-              "protocol": "http",
-              "host": [ "localhost" ],
-              "port": "5200",
-              "path": [ "api", "products", "REPLACE-WITH-PRODUCT-ID" ]
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             }
-          },
-          "response": []
+          }
+        },
+        {
+          "name": "Replay Catalog",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "",
+            "url": {
+              "raw": "http://localhost:5200/api/products/replay",
+              "protocol": "http",
+              "host": [
+                "localhost:5200"
+              ],
+              "path": [
+                "api",
+                "products",
+                "replay"
+              ],
+              "query": [],
+              "variable": []
+            }
+          }
         }
       ]
     },
@@ -205,226 +306,454 @@
           "request": {
             "method": "POST",
             "header": [],
-            "body": {
-              "mode": "raw",
-              "raw": "{\r\n  \"name\": \"ACME Supplies\",\r\n  \"contactEmail\": \"sales@acme.com\"\r\n}",
-              "options": { "raw": { "language": "json" } }
+            "auth": {
+              "type": "noauth"
             },
+            "description": "",
             "url": {
               "raw": "http://localhost:5300/api/supplier/register",
               "protocol": "http",
-              "host": [ "localhost" ],
-              "port": "5300",
-              "path": [ "api", "supplier", "register" ]
+              "host": [
+                "localhost:5300"
+              ],
+              "path": [
+                "api",
+                "supplier",
+                "register"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"name\": \"ACME Supplies\",\r\n  \"contactEmail\": \"sales@acme.com\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             }
-          },
-          "response": []
+          }
         },
         {
           "name": "Add Product (via portal)",
           "request": {
             "method": "POST",
             "header": [],
-            "body": {
-              "mode": "raw",
-              "raw": "{\r\n  \"name\": \"Voetbal\",\r\n  \"description\": \"Maat 5\",\r\n  \"price\": 24.99,\r\n  \"stock\": 100,\r\n  \"supplierId\": \"REPLACE-WITH-SUPPLIER-ID\"\r\n}",
-              "options": { "raw": { "language": "json" } }
+            "auth": {
+              "type": "noauth"
             },
+            "description": "",
             "url": {
               "raw": "http://localhost:5300/api/supplier/products",
               "protocol": "http",
-              "host": [ "localhost" ],
-              "port": "5300",
-              "path": [ "api", "supplier", "products" ]
+              "host": [
+                "localhost:5300"
+              ],
+              "path": [
+                "api",
+                "supplier",
+                "products"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"name\": \"Voetbal\",\r\n  \"description\": \"Maat 5\",\r\n  \"price\": 24.99,\r\n  \"stock\": 100,\r\n  \"supplierId\": \"REPLACE-WITH-SUPPLIER-ID\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             }
-          },
-          "response": []
+          }
         },
         {
           "name": "Get Products (via portal)",
           "request": {
             "method": "GET",
             "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "",
             "url": {
               "raw": "http://localhost:5300/api/supplier/products",
               "protocol": "http",
-              "host": [ "localhost" ],
-              "port": "5300",
-              "path": [ "api", "supplier", "products" ]
+              "host": [
+                "localhost:5300"
+              ],
+              "path": [
+                "api",
+                "supplier",
+                "products"
+              ],
+              "query": [],
+              "variable": []
             }
-          },
-          "response": []
+          }
         }
       ]
     },
     {
-      "name": "Get data",
-      "event": [
+      "name": "Collection Run",
+      "item": [
         {
-          "listen": "test",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "pm.test(\"Status code is 200\", function () {",
-              "    pm.response.to.have.status(200);",
-              "});"
-            ]
-          }
-        }
-      ],
-      "request": {
-        "method": "GET",
-        "header": [],
-        "url": {
-          "raw": "{{base_url}}/info?id=1",
-          "host": [
-            "{{base_url}}"
-          ],
-          "path": [
-            "info"
-          ],
-          "query": [
+          "name": "Register Trusted Supplier",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "",
+            "url": {
+              "raw": "http://localhost:5200/api/suppliers",
+              "protocol": "http",
+              "host": [
+                "localhost:5200"
+              ],
+              "path": [
+                "api",
+                "suppliers"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"name\": \"ACME Supplies\",\r\n  \"contactEmail\": \"sales@acme.com\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
             {
-              "key": "id",
-              "value": "1"
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {},
+                "exec": [
+                  "if (pm.response.code === 200 || pm.response.code === 201) {",
+                  "    const data = pm.response.json();",
+                  "    pm.variables.set(\"automatedSupplierId\", data.id);",
+                  "}"
+                ]
+              }
             }
           ]
         },
-        "description": "This is a GET request and it is used to \"get\" data from an endpoint. There is no request body for a GET request, but you can use query parameters to help specify the resource you want data on (e.g., in this request, we have `id=1`).\n\nA successful GET response will have a `200 OK` status, and should include some kind of response body - for example, HTML web content or JSON data."
-      },
-      "response": []
-    },
-    {
-      "name": "Update data",
-      "event": [
         {
-          "listen": "test",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "pm.test(\"Successful PUT request\", function () {",
-              "    pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
-              "});",
-              ""
-            ]
-          }
-        }
-      ],
-      "request": {
-        "method": "PUT",
-        "header": [],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n\t\"name\": \"Add your name in the body\"\n}",
-          "options": {
-            "raw": {
-              "language": "json"
+          "name": "Add 1st Product",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "",
+            "url": {
+              "raw": "http://localhost:5200/api/products",
+              "protocol": "http",
+              "host": [
+                "localhost:5200"
+              ],
+              "path": [
+                "api",
+                "products"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Champions League voetbal Budapest 2026\",\n  \"description\": \"Maat 5\",\n  \"price\": 49.99,\n  \"stock\": 500,\n  \"supplierId\": \"{{automatedSupplierId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             }
-          }
-        },
-        "url": {
-          "raw": "{{base_url}}/info?id=1",
-          "host": [
-            "{{base_url}}"
-          ],
-          "path": [
-            "info"
-          ],
-          "query": [
+          },
+          "event": [
             {
-              "key": "id",
-              "value": "1"
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {},
+                "exec": [
+                  "if (pm.response.code === 201 || pm.response.code === 200) {",
+                  "    const data = pm.response.json();",
+                  "    pm.variables.set(\"firstProductId\", data.id);",
+                  "}"
+                ]
+              }
             }
           ]
         },
-        "description": "This is a PUT request and it is used to overwrite an existing piece of data. For instance, after you create an entity with a POST request, you may want to modify that later. You can do that using a PUT request. You typically identify the entity being updated by including an identifier in the URL (eg. `id=1`).\n\nA successful PUT request typically returns a `200 OK`, `201 Created`, or `204 No Content` response code."
-      },
-      "response": []
-    },
-    {
-      "name": "Delete data",
-      "event": [
         {
-          "listen": "test",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "pm.test(\"Successful DELETE request\", function () {",
-              "    pm.expect(pm.response.code).to.be.oneOf([200, 202, 204]);",
-              "});",
-              ""
-            ]
-          }
-        }
-      ],
-      "request": {
-        "method": "DELETE",
-        "header": [],
-        "body": {
-          "mode": "raw",
-          "raw": "",
-          "options": {
-            "raw": {
-              "language": "json"
+          "name": "Add 2st Product",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "",
+            "url": {
+              "raw": "http://localhost:5200/api/products",
+              "protocol": "http",
+              "host": [
+                "localhost:5200"
+              ],
+              "path": [
+                "api",
+                "products"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Voetbal\",\n  \"description\": \"Maat 5\",\n  \"price\": 24.99,\n  \"stock\": 100,\n  \"supplierId\": \"{{automatedSupplierId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             }
-          }
-        },
-        "url": {
-          "raw": "{{base_url}}/info?id=1",
-          "host": [
-            "{{base_url}}"
-          ],
-          "path": [
-            "info"
-          ],
-          "query": [
+          },
+          "event": [
             {
-              "key": "id",
-              "value": "1"
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {},
+                "exec": [
+                  "if (pm.response.code === 201 || pm.response.code === 200) {",
+                  "    const data = pm.response.json();",
+                  "    pm.variables.set(\"secondProductId\", data.id);",
+                  "}"
+                ]
+              }
             }
           ]
         },
-        "description": "This is a DELETE request, and it is used to delete data that was previously created via a POST request. You typically identify the entity being updated by including an identifier in the URL (eg. `id=1`).\n\nA successful DELETE request typically returns a `200 OK`, `202 Accepted`, or `204 No Content` response code."
-      },
-      "response": []
-    },
-    {
-      "name": "New Request",
-      "request": {
-        "method": "GET",
-        "header": []
-      },
-      "response": []
-    }
-  ],
-  "event": [
-    {
-      "listen": "prerequest",
-      "script": {
-        "type": "text/javascript",
-        "exec": [
-          ""
-        ]
-      }
-    },
-    {
-      "listen": "test",
-      "script": {
-        "type": "text/javascript",
-        "exec": [
-          ""
-        ]
-      }
+        {
+          "name": "Get Products",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "",
+            "url": {
+              "raw": "http://localhost:5200/api/products",
+              "protocol": "http",
+              "host": [
+                "localhost:5200"
+              ],
+              "path": [
+                "api",
+                "products"
+              ],
+              "query": [],
+              "variable": []
+            }
+          }
+        },
+        {
+          "name": "Get Product By Id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "",
+            "url": {
+              "raw": "http://localhost:5200/api/products/{{firstProductID}}",
+              "protocol": "http",
+              "host": [
+                "localhost:5200"
+              ],
+              "path": [
+                "api",
+                "products",
+                "{{firstProductID}}"
+              ],
+              "query": [],
+              "variable": []
+            }
+          }
+        },
+        {
+          "name": "Update Product",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "",
+            "url": {
+              "raw": "http://localhost:5200/api/products/{{firstProductId}}",
+              "protocol": "http",
+              "host": [
+                "localhost:5200"
+              ],
+              "path": [
+                "api",
+                "products",
+                "{{firstProductId}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Pro Voetbal\",\n  \"description\": \"Maat 5 wedstrijdbal\",\n  \"price\": 29.99,\n  \"stock\": 250\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Update Product (CORRUPT)",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "",
+            "url": {
+              "raw": "http://localhost:5200/api/products/{{firstProductId}}",
+              "protocol": "http",
+              "host": [
+                "localhost:5200"
+              ],
+              "path": [
+                "api",
+                "products",
+                "{{firstProductId}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"CURRUPT\",\n  \"description\": \"Maat 5 wedstrijdbal\",\n  \"price\": 00.01,\n  \"stock\": 10\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Replay Catalog",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "",
+            "url": {
+              "raw": "http://localhost:5200/api/products/replay",
+              "protocol": "http",
+              "host": [
+                "localhost:5200"
+              ],
+              "path": [
+                "api",
+                "products",
+                "replay"
+              ],
+              "query": [],
+              "variable": []
+            }
+          }
+        },
+        {
+          "name": "Create Order",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "",
+            "url": {
+              "raw": "http://localhost:5100/api/orders",
+              "protocol": "http",
+              "host": [
+                "localhost:5100"
+              ],
+              "path": [
+                "api",
+                "orders"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    { \"productId\": \"{{firstProductId}}\", \"quantity\": 10, \"price\": 19.99 },\n    { \"productId\": \"{{secondProductId}}\", \"quantity\": 10, \"price\": 5.50 }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
     }
   ],
   "variable": [
     {
       "key": "id",
-      "value": "1"
+      "value": "1",
+      "type": "default"
     },
     {
       "key": "base_url",
-      "value": "https://template.postman-echo.com"
+      "value": "https://template.postman-echo.com",
+      "type": "default"
+    },
+    {
+      "key": "automatedSupplierId",
+      "value": "",
+      "type": "default"
+    },
+    {
+      "key": "firstProductID",
+      "value": "",
+      "type": "default"
+    },
+    {
+      "key": "firstProductId",
+      "value": "",
+      "type": "default"
+    },
+    {
+      "key": "secondProductId",
+      "value": "",
+      "type": "default"
     }
   ]
 }
