@@ -1,5 +1,7 @@
+using BallCom.Catalog.API.Commands;
 using BallCom.Catalog.API.Data;
 using BallCom.Catalog.API.Messaging;
+using BallCom.Catalog.API.Queries;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -17,6 +19,14 @@ builder.Services.AddDbContext<CatalogDbContext>(options =>
 builder.Services.AddControllers();
 
 builder.Services.AddScoped<IEventPublisher, RabbitMQEventPublisher>();
+
+// Added a CQRS layer
+builder.Services.AddScoped<AddProductCommandHandler>();
+builder.Services.AddScoped<CatalogQueryHandler>();
+builder.Services.AddScoped<UpdateProductCommandHandler>();
+
+// Added a Command to replay (event sourcing)
+builder.Services.AddScoped<ReplayProductsCommandHandler>();
 
 var app = builder.Build();
 
