@@ -11,6 +11,11 @@ builder.Services.AddHttpClient("OrderingService", client =>
     client.BaseAddress = new Uri("http://localhost:5100/");
 });
 
+builder.Services.AddHttpClient("PaymentService", client =>
+{
+    client.BaseAddress = new Uri("http://localhost:5400/");
+});
+
 builder.Services.AddControllers();
 
 var app = builder.Build();

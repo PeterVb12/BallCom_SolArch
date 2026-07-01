@@ -258,6 +258,171 @@
       ]
     },
     {
+      "name": "Payment Microservice",
+      "item": [
+        {
+          "name": "Get All Transactions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:5400/api/payments",
+              "protocol": "http",
+              "host": [ "localhost" ],
+              "port": "5400",
+              "path": [ "api", "payments" ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Transaction By OrderId",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:5400/api/payments/1",
+              "protocol": "http",
+              "host": [ "localhost" ],
+              "port": "5400",
+              "path": [ "api", "payments", "1" ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Start Payment - ForwardPay",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"orderId\": 1,\r\n  \"paymentMethod\": \"ForwardPay\"\r\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "http://localhost:5400/api/payments",
+              "protocol": "http",
+              "host": [ "localhost" ],
+              "port": "5400",
+              "path": [ "api", "payments" ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Start Payment - ForwardPay (simulate failure)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"orderId\": 1,\r\n  \"paymentMethod\": \"ForwardPay\",\r\n  \"simulateFailure\": true\r\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "http://localhost:5400/api/payments",
+              "protocol": "http",
+              "host": [ "localhost" ],
+              "port": "5400",
+              "path": [ "api", "payments" ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Start Payment - AfterPay",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"orderId\": 1,\r\n  \"paymentMethod\": \"AfterPay\"\r\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "http://localhost:5400/api/payments",
+              "protocol": "http",
+              "host": [ "localhost" ],
+              "port": "5400",
+              "path": [ "api", "payments" ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Complete Payment (AfterPay)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:5400/api/payments/1/complete",
+              "protocol": "http",
+              "host": [ "localhost" ],
+              "port": "5400",
+              "path": [ "api", "payments", "1", "complete" ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Customer Portal - Payments",
+      "item": [
+        {
+          "name": "Start Payment (via portal)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"orderId\": 1,\r\n  \"paymentMethod\": \"ForwardPay\"\r\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/customer/payments",
+              "protocol": "http",
+              "host": [ "localhost" ],
+              "port": "5000",
+              "path": [ "api", "customer", "payments" ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Complete Payment (via portal)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:5000/api/customer/payments/1/complete",
+              "protocol": "http",
+              "host": [ "localhost" ],
+              "port": "5000",
+              "path": [ "api", "customer", "payments", "1", "complete" ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Payment Status (via portal)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:5000/api/customer/payments/1",
+              "protocol": "http",
+              "host": [ "localhost" ],
+              "port": "5000",
+              "path": [ "api", "customer", "payments", "1" ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
       "name": "Get data",
       "event": [
         {

@@ -37,6 +37,19 @@ services:
     networks:
       - ballcom_network
 
+  # 4. De database voor de Payment Service (eigen database per microservice)
+  payment_db:
+    image: postgres:latest
+    container_name: ballcom_payment_db
+    environment:
+      POSTGRES_USER: payment_user
+      POSTGRES_PASSWORD: payment_password
+      POSTGRES_DB: payment_db
+    ports:
+      - "5434:5432" # Eigen poort (5434) om conflict met andere databases te vermijden
+    networks:
+      - ballcom_network
+
 networks:
   ballcom_network:
     driver: bridge

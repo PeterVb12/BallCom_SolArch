@@ -1,7 +1,16 @@
-# Architectuurprincipes — Catalogus Service (Ball.com)
+# Architectuurprincipes — Ball.com
 
-Dit document beschrijft **per principe** waar en hoe het is toegepast in de
-Catalogus Service, met concrete verwijzingen naar bestanden en klassen.
+Dit document beschrijft **per principe** waar en hoe het is toegepast, met concrete
+verwijzingen naar bestanden en klassen. Er is een sectie per bounded context:
+
+- [Catalogus Service](#architectuurprincipes--catalogus-service) (hieronder)
+- [Payment Service](#architectuurprincipes--payment-service) (onderaan)
+
+---
+
+# Architectuurprincipes — Catalogus Service
+
+Dit deel beschrijft de toepassing van de principes in de Catalogus Service.
 
 ## Overzicht van de bounded context
 
@@ -133,4 +142,143 @@ ENTRYPOINT ["dotnet", "BallCom.Catalog.API.dll"]
 
 Bij containerisatie verandert de connection string van `localhost` naar de
 service-naam (`catalog_db`) en de RabbitMQ-host naar `rabbitmq`, beide op het
+gedeelde `ballcom_network`.
+
+---
+
+# Architectuurprincipes — Payment Service
+
+Dit deel beschrijft de toepassing van de principes in de Payment Service.
+
+## Overzicht van de bounded context
+
+```
+Ordering (:5100) ──OrderPlacedEvent──> ballcom-exchange (fanout, RabbitMQ)
+                                              │
+                                              ▼
+                          BallCom.Payment.API (:5400)
+                          OrderPlacedEventConsumer (BackgroundService)
+                                              │  maak Transaction (PENDING) — idempotent
+                                              ▼
+        ┌─────────────────────────────────────┼──────────────────────────────┐
+        ▼                                       ▼                              ▼
+  EventStore tabel                        Transactions                   RabbitMQ publish
+  (append-only)                           (read model)                   PaymentCompletedEvent / PaymentFailedEvent
+                                                                               │
+                                                                               ▼
+                                                             Warehouse Service (downstream, release order)
+
+Klant ──POST /api/customer/payments──> BallCom.API (BFF, :5000) ──HTTP/REST──> Payment (:5400)
+```
+
+## 1. Domain-Driven Design (DDD)
+
+**Toepassing:** Payment is een eigen **bounded context** met eigen project, eigen
+database (`payment_db`) en eigen domeintaal. Er zit geen Ordering-/Warehouse-logica in.
+
+- Aggregate / domeinentiteit: `Transaction` — `BallCom.Payment.API/Models/Transaction.cs`
+  (met de waardeconstanten `PaymentStatus` en `PaymentMethods`).
+- Domeinregels afgedwongen in `BallCom.Payment.API/Controllers/PaymentsController.cs`:
+  - "PaymentMethod moet `ForwardPay` of `AfterPay` zijn";
+  - "een transactie mag alleen bestaan voor een OrderId dat via `OrderPlacedEvent` is
+    ontvangen" (check `Transactions.FirstOrDefault(t => t.OrderId == ...)`);
+  - "het bedrag is gelijk aan `TotalPrice`" — geborgd doordat `Amount` uit het event
+    komt en niet door de klant wordt meegestuurd.
+
+## 2. Eventual Consistency
+
+**Toepassing:** Payment deelt geen database met Ordering en reageert **asynchroon** op
+`OrderPlacedEvent`. Ordering wacht niet op Payment.
+
+- De consumer `OrderPlacedEventConsumer` (`BallCom.Payment.API/Messaging/OrderPlacedEventConsumer.cs`)
+  maakt de transactie pas aan wanneer het event verwerkt is; er zit dus een klein
+  tijdvenster tussen "order geplaatst" en "transactie bestaat", waarna het systeem
+  convergeert. De klant kan `GET /api/payments/{orderId}` pollen tot de transactie er is.
+- Payment is op zijn beurt Upstream t.o.v. Warehouse: die release gebeurt eveneens
+  asynchroon via `PaymentCompletedEvent`.
+
+## 3. Event Driven Architecture (EDA)
+
+**Toepassing:** Payment is zowel **consumer** als **publisher** op dezelfde
+`ballcom-exchange` (fanout).
+
+- Consumer: `OrderPlacedEventConsumer` — een `BackgroundService` die een eigen queue
+  (`payment.order-placed`) aan de exchange bindt en op `OrderPlacedEvent` filtert
+  (`ea.RoutingKey`). Geregistreerd via `AddHostedService<OrderPlacedEventConsumer>()`
+  in `BallCom.Payment.API/Program.cs`.
+- Publisher: `IEventPublisher` + `RabbitMQEventPublisher`
+  (`BallCom.Payment.API/Messaging/`) publiceert `PaymentCompletedEvent` en
+  `PaymentFailedEvent` — `BallCom.Payment.API/Models/Events/PaymentEvents.cs`.
+
+## 4. CQRS
+
+**Toepassing:** Commands (schrijven) en Queries (lezen) zijn gescheiden in
+`PaymentsController`.
+
+- **Commands** (records): `StartPaymentCommand` —
+  `BallCom.Payment.API/Models/Commands/PaymentCommands.cs`, behandeld door
+  `POST /api/payments` (`StartPayment`) en `POST /api/payments/{orderId}/complete`
+  (`CompletePayment`).
+- **Queries** lezen uit het read model met `AsNoTracking()`: `GetTransactions`
+  (`GET /api/payments`) en `GetTransactionByOrderId` (`GET /api/payments/{orderId}`).
+
+## 5. Event Sourcing
+
+**Toepassing:** Alle mutaties worden opgeslagen als events in de append-only
+`EventStore`-tabel; het read model `Transactions` wordt vanuit die events geprojecteerd.
+Zelfde patroon als `BallCom.Catalog.API/Data/EventStore.cs`.
+
+- Event store entiteit: `StoredEvent` — `BallCom.Payment.API/Models/StoredEvent.cs`.
+- Append-only helper: `EventStore.Append<T>(...)` — `BallCom.Payment.API/Data/EventStore.cs`.
+- `DbSet<StoredEvent> EventStore` met auto-increment `Sequence` —
+  `BallCom.Payment.API/Data/PaymentDbContext.cs`.
+- Vastgelegde events: `TransactionCreatedEvent` (bij consume), `PaymentCompletedEvent`
+  en `PaymentFailedEvent` (in de controller). Telkens geldt: eerst `eventStore.Append(...)`,
+  dan projectie op het `Transaction` read model, dan één `SaveChangesAsync()`.
+
+## 6. Enterprise Integration Patterns (EIP)
+
+**Gekozen patronen en motivatie:**
+
+- **Idempotent Receiver** — de consumer voorkomt dubbele verwerking van hetzelfde
+  `OrderPlacedEvent` op twee niveaus: (1) een check `Transactions.Any(t => t.OrderId == ...)`
+  vóór insert, en (2) een **unieke database-index op `OrderId`**
+  (`PaymentDbContext.OnModelCreating`) die een race afvangt (`DbUpdateException` → negeren).
+  Zie `BallCom.Payment.API/Messaging/OrderPlacedEventConsumer.cs`. *Motivatie:* bij
+  fanout/at-least-once bezorging kan een event meer dan eens aankomen.
+- **Message Translator** — `RabbitMQEventPublisher.Publish` vertaalt een C#
+  domein-record naar een JSON-bericht + routing key; de consumer vertaalt inkomende
+  JSON terug naar het lokale contract `OrderPlacedEvent`
+  (`BallCom.Payment.API/Models/Events/OrderPlacedEvent.cs`), zodat het transportformaat
+  losgekoppeld is van het domeinmodel en Ordering ongewijzigd blijft.
+- **Messaging Gateway** — `CustomerPaymentsController` in `BallCom.API` schermt de
+  Payment microservice af achter de bestaande customer-BFF.
+
+## 7. Containerization
+
+**Toepassing:** `payment_db` (Postgres) draait als container via Docker Compose op
+host-poort `5434` met eigen credentials; RabbitMQ blijft ongewijzigd. De .NET service
+draait voorlopig lokaal met `dotnet run`.
+
+- `docker-compose.yml` definieert de service `payment_db`.
+
+**Latere containerisatie van de .NET service** (stub):
+
+```dockerfile
+# BallCom.Payment.API/Dockerfile (voorbeeld, nog niet actief)
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+WORKDIR /src
+COPY . .
+RUN dotnet publish BallCom.Payment.API/BallCom.Payment.API.csproj -c Release -o /app
+
+FROM mcr.microsoft.com/dotnet/aspnet:10.0
+WORKDIR /app
+COPY --from=build /app .
+EXPOSE 5400
+ENTRYPOINT ["dotnet", "BallCom.Payment.API.dll"]
+```
+
+Bij containerisatie verandert de connection string van `localhost` naar de
+service-naam (`payment_db`) en de RabbitMQ-host van `localhost` naar `rabbitmq`
+(in zowel `RabbitMQEventPublisher` als `OrderPlacedEventConsumer`), beide op het
 gedeelde `ballcom_network`.

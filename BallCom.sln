@@ -13,6 +13,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BallCom.Catalog.API", "Ball
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BallCom.Supplier.API", "BallCom.Supplier.API\BallCom.Supplier.API.csproj", "{6A00E665-6E4D-4D43-A96E-C3B9FF80AD7F}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BallCom.Payment.API", "BallCom.Payment.API\BallCom.Payment.API.csproj", "{03258ECF-4CE9-417E-A935-1ADB992998D5}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -83,6 +85,18 @@ Global
 		{6A00E665-6E4D-4D43-A96E-C3B9FF80AD7F}.Release|x64.Build.0 = Release|Any CPU
 		{6A00E665-6E4D-4D43-A96E-C3B9FF80AD7F}.Release|x86.ActiveCfg = Release|Any CPU
 		{6A00E665-6E4D-4D43-A96E-C3B9FF80AD7F}.Release|x86.Build.0 = Release|Any CPU
+		{03258ECF-4CE9-417E-A935-1ADB992998D5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{03258ECF-4CE9-417E-A935-1ADB992998D5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{03258ECF-4CE9-417E-A935-1ADB992998D5}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{03258ECF-4CE9-417E-A935-1ADB992998D5}.Debug|x64.Build.0 = Debug|Any CPU
+		{03258ECF-4CE9-417E-A935-1ADB992998D5}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{03258ECF-4CE9-417E-A935-1ADB992998D5}.Debug|x86.Build.0 = Debug|Any CPU
+		{03258ECF-4CE9-417E-A935-1ADB992998D5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{03258ECF-4CE9-417E-A935-1ADB992998D5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{03258ECF-4CE9-417E-A935-1ADB992998D5}.Release|x64.ActiveCfg = Release|Any CPU
+		{03258ECF-4CE9-417E-A935-1ADB992998D5}.Release|x64.Build.0 = Release|Any CPU
+		{03258ECF-4CE9-417E-A935-1ADB992998D5}.Release|x86.ActiveCfg = Release|Any CPU
+		{03258ECF-4CE9-417E-A935-1ADB992998D5}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
