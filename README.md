@@ -14,7 +14,9 @@ Zie [`ARCHITECTURE.md`](ARCHITECTURE.md) voor de toepassing van de 7 architectuu
 | `BallCom.API` | Customer portal (BFF) | `5000` | — |
 | `BallCom.Catalog.API` | Catalogus microservice | `5200` | `catalog_db` (5433) |
 | `BallCom.Supplier.API` | Supplier portal (BFF) | `5300` | — |
-| `BallCom.Payment.API` | **Payment microservice** | `5400` | `payment_db` (5434) |
+| `BallCom.Payment.API` | Payment microservice | `5400` | `payment_db` (5434) |
+| `BallCom.Warehouse.API` | **Warehouse microservice** | `5500` | `warehouse_db` (5435) |
+| `BallCom.WarehousePortal.API` | **Warehouse portal (BFF)** | `5600` | — |
 
 ## 1. Start de infrastructuur (Postgres + RabbitMQ)
 
@@ -27,6 +29,7 @@ Dit start:
 - `ordering_db` — Postgres voor Ordering op poort `5432`
 - `catalog_db` — Postgres voor Catalog op poort `5433`
 - `payment_db` — Postgres voor Payment op poort `5434`
+- `warehouse_db` — Postgres voor Warehouse op poort `5435`
 
 ## 2. Start de services
 
@@ -48,6 +51,14 @@ dotnet run --urls="http://localhost:5100"
 # Payment microservice (consumeert OrderPlacedEvent)
 cd BallCom.Payment.API
 dotnet run --urls="http://localhost:5400"
+
+# Warehouse microservice (consumeert PaymentCompletedEvent)
+cd BallCom.Warehouse.API
+dotnet run --urls="http://localhost:5500"
+
+# Warehouse portal (BFF -> Warehouse)
+cd BallCom.WarehousePortal.API
+dotnet run --urls="http://localhost:5600"
 
 # Customer portal (BFF -> Ordering + Payment)
 cd BallCom.API
@@ -130,11 +141,41 @@ aan (unieke index op `OrderId` + check in de consumer).
 (rechtstreeks op 5400) of `?simulateFailure=true` bij `/complete` → status `FAILED`
 en een `PaymentFailedEvent`.
 
+## 5. Testen (Warehouse end-to-end)
+
+Zodra een betaling is afgerond, maakt de Warehouse Service automatisch een pick list aan.
+Vervolg op de betaal-flow hierboven:
+
+1. Payment publiceert `PaymentCompletedEvent`. **Warehouse consumeert dit** en maakt
+   automatisch een `PickList` met status `RELEASED` aan. De orderregels worden via de
+   Ordering API opgehaald (Content Enricher). Controleer:
+
+```bash
+GET http://localhost:5600/api/warehouse/picklists
+GET http://localhost:5500/api/picklists/order/{orderId}
+```
+
+2. **Doorloop de pick flow** (via warehouse portal, `{id}` = PickList-Guid):
+
+```bash
+POST http://localhost:5600/api/warehouse/picklists/{id}/start-picking      # RELEASED -> PICKING
+POST http://localhost:5600/api/warehouse/picklists/{id}/complete-picking   # PICKING  -> PICKED
+POST http://localhost:5600/api/warehouse/picklists/{id}/pack               # PICKED   -> PACKED
+POST http://localhost:5600/api/warehouse/picklists/{id}/ready              # PACKED   -> READY_FOR_SHIPMENT
+```
+
+3. Bij `READY_FOR_SHIPMENT` publiceert Warehouse een `PackageReadyEvent` op
+   `ballcom-exchange`, zichtbaar in het RabbitMQ-dashboard (release naar Logistics).
+
+**Statusvalidatie:** een overgang buiten de volgorde (bijv. `pack` zonder `PICKED`)
+geeft `409 Conflict`. **Idempotency:** een dubbel ontvangen `PaymentCompletedEvent`
+maakt geen tweede pick list aan (unieke index op `OrderId` + check in de consumer).
+
 ## Postman
 
 Importeer `Postman/Ball.Com.postman_collection.json` — de mappen **Catalog Microservice**,
-**Supplier Portal**, **Payment Microservice** en **Customer Portal - Payments** bevatten
-kant-en-klare requests.
+**Supplier Portal**, **Payment Microservice**, **Customer Portal - Payments**,
+**Warehouse Microservice** en **Warehouse Portal** bevatten kant-en-klare requests.
 
 ## RabbitMQ dashboard
 

@@ -423,6 +423,211 @@
       ]
     },
     {
+      "name": "Warehouse Microservice",
+      "item": [
+        {
+          "name": "Get All PickLists",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:5500/api/picklists",
+              "protocol": "http",
+              "host": [ "localhost" ],
+              "port": "5500",
+              "path": [ "api", "picklists" ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get PickList By Id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:5500/api/picklists/REPLACE-WITH-PICKLIST-ID",
+              "protocol": "http",
+              "host": [ "localhost" ],
+              "port": "5500",
+              "path": [ "api", "picklists", "REPLACE-WITH-PICKLIST-ID" ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get PickList By OrderId",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:5500/api/picklists/order/1",
+              "protocol": "http",
+              "host": [ "localhost" ],
+              "port": "5500",
+              "path": [ "api", "picklists", "order", "1" ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Start Picking (RELEASED -> PICKING)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:5500/api/picklists/REPLACE-WITH-PICKLIST-ID/start-picking",
+              "protocol": "http",
+              "host": [ "localhost" ],
+              "port": "5500",
+              "path": [ "api", "picklists", "REPLACE-WITH-PICKLIST-ID", "start-picking" ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Complete Picking (PICKING -> PICKED)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:5500/api/picklists/REPLACE-WITH-PICKLIST-ID/complete-picking",
+              "protocol": "http",
+              "host": [ "localhost" ],
+              "port": "5500",
+              "path": [ "api", "picklists", "REPLACE-WITH-PICKLIST-ID", "complete-picking" ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Pack (PICKED -> PACKED)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:5500/api/picklists/REPLACE-WITH-PICKLIST-ID/pack",
+              "protocol": "http",
+              "host": [ "localhost" ],
+              "port": "5500",
+              "path": [ "api", "picklists", "REPLACE-WITH-PICKLIST-ID", "pack" ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Ready (PACKED -> READY_FOR_SHIPMENT)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:5500/api/picklists/REPLACE-WITH-PICKLIST-ID/ready",
+              "protocol": "http",
+              "host": [ "localhost" ],
+              "port": "5500",
+              "path": [ "api", "picklists", "REPLACE-WITH-PICKLIST-ID", "ready" ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Warehouse Portal",
+      "item": [
+        {
+          "name": "Get All PickLists (via portal)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:5600/api/warehouse/picklists",
+              "protocol": "http",
+              "host": [ "localhost" ],
+              "port": "5600",
+              "path": [ "api", "warehouse", "picklists" ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get PickList By Id (via portal)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:5600/api/warehouse/picklists/REPLACE-WITH-PICKLIST-ID",
+              "protocol": "http",
+              "host": [ "localhost" ],
+              "port": "5600",
+              "path": [ "api", "warehouse", "picklists", "REPLACE-WITH-PICKLIST-ID" ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Start Picking (via portal)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:5600/api/warehouse/picklists/REPLACE-WITH-PICKLIST-ID/start-picking",
+              "protocol": "http",
+              "host": [ "localhost" ],
+              "port": "5600",
+              "path": [ "api", "warehouse", "picklists", "REPLACE-WITH-PICKLIST-ID", "start-picking" ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Complete Picking (via portal)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:5600/api/warehouse/picklists/REPLACE-WITH-PICKLIST-ID/complete-picking",
+              "protocol": "http",
+              "host": [ "localhost" ],
+              "port": "5600",
+              "path": [ "api", "warehouse", "picklists", "REPLACE-WITH-PICKLIST-ID", "complete-picking" ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Pack (via portal)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:5600/api/warehouse/picklists/REPLACE-WITH-PICKLIST-ID/pack",
+              "protocol": "http",
+              "host": [ "localhost" ],
+              "port": "5600",
+              "path": [ "api", "warehouse", "picklists", "REPLACE-WITH-PICKLIST-ID", "pack" ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Ready (via portal)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:5600/api/warehouse/picklists/REPLACE-WITH-PICKLIST-ID/ready",
+              "protocol": "http",
+              "host": [ "localhost" ],
+              "port": "5600",
+              "path": [ "api", "warehouse", "picklists", "REPLACE-WITH-PICKLIST-ID", "ready" ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
       "name": "Get data",
       "event": [
         {

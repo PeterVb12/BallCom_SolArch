@@ -50,6 +50,19 @@ services:
     networks:
       - ballcom_network
 
+  # 5. De database voor de Warehouse Service (eigen database per microservice)
+  warehouse_db:
+    image: postgres:latest
+    container_name: ballcom_warehouse_db
+    environment:
+      POSTGRES_USER: warehouse_user
+      POSTGRES_PASSWORD: warehouse_password
+      POSTGRES_DB: warehouse_db
+    ports:
+      - "5435:5432" # Eigen poort (5435) om conflict met andere databases te vermijden
+    networks:
+      - ballcom_network
+
 networks:
   ballcom_network:
     driver: bridge

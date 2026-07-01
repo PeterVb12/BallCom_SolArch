@@ -4,7 +4,8 @@ Dit document beschrijft **per principe** waar en hoe het is toegepast, met concr
 verwijzingen naar bestanden en klassen. Er is een sectie per bounded context:
 
 - [Catalogus Service](#architectuurprincipes--catalogus-service) (hieronder)
-- [Payment Service](#architectuurprincipes--payment-service) (onderaan)
+- [Payment Service](#architectuurprincipes--payment-service)
+- [Warehouse Service](#architectuurprincipes--warehouse-service) (onderaan)
 
 ---
 
@@ -282,3 +283,147 @@ Bij containerisatie verandert de connection string van `localhost` naar de
 service-naam (`payment_db`) en de RabbitMQ-host van `localhost` naar `rabbitmq`
 (in zowel `RabbitMQEventPublisher` als `OrderPlacedEventConsumer`), beide op het
 gedeelde `ballcom_network`.
+
+---
+
+# Architectuurprincipes — Warehouse Service
+
+Dit deel beschrijft de toepassing van de principes in de Warehouse Service.
+
+## Overzicht van de bounded context
+
+```
+Payment (:5400) ──PaymentCompletedEvent──> ballcom-exchange (fanout, RabbitMQ)
+                                                  │
+                                                  ▼
+                              BallCom.Warehouse.API (:5500)
+                              PaymentCompletedEventConsumer (BackgroundService)
+                                    │  (1) idempotent: bestaat er al een pick list?
+                                    │  (2) Content Enricher: GET /api/orders/{id} bij Ordering (:5100)
+                                    ▼
+            ┌─────────────────────────────────────┼──────────────────────────────┐
+            ▼                                       ▼                              ▼
+      EventStore tabel                    PickLists + PickListLines          (na /ready) RabbitMQ publish
+      (append-only)                       (read model, RELEASED)             PackageReadyEvent
+                                                                                    │
+                                                                                    ▼
+                                                                  Logistics Service (downstream, nog niet gebouwd)
+
+Warehouse-medewerker ──POST──> BallCom.WarehousePortal.API (BFF, :5600) ──HTTP/REST──> Warehouse (:5500)
+```
+
+## 1. Domain-Driven Design (DDD)
+
+**Toepassing:** Warehouse is een eigen **bounded context** met eigen project, eigen
+database (`warehouse_db`) en eigen domeintaal. Er zit geen Payment-/Logistics-logica in.
+
+- Aggregate / domeinentiteiten: `PickList` (aggregate root) met onderliggende
+  `PickListLine` — `BallCom.Warehouse.API/Models/PickList.cs` en
+  `BallCom.Warehouse.API/Models/PickListLine.cs` (met `PickListStatus`-constanten).
+- Domeinregels afgedwongen in `BallCom.Warehouse.API/Controllers/PickListsController.cs`
+  (`Transition(...)`): alleen de opeenvolgende statusovergangen
+  `RELEASED → PICKING → PICKED → PACKED → READY_FOR_SHIPMENT` zijn toegestaan;
+  een overgang buiten die volgorde geeft `409 Conflict` (geen `PACKED` zonder `PICKED`,
+  geen `READY_FOR_SHIPMENT` zonder `PACKED`).
+
+## 2. Eventual Consistency
+
+**Toepassing:** Warehouse deelt geen database met Payment of Ordering en reageert
+**asynchroon** op `PaymentCompletedEvent`. Payment wacht niet op Warehouse.
+
+- De consumer `PaymentCompletedEventConsumer`
+  (`BallCom.Warehouse.API/Messaging/PaymentCompletedEventConsumer.cs`) maakt de pick list
+  pas aan wanneer het event verwerkt is. Omdat het event geen orderregels bevat, worden
+  die **synchroon opgehaald via REST** bij de Ordering API (`GET /api/orders/{id}`);
+  de rest van de keten blijft eventueel consistent.
+- Warehouse is op zijn beurt Upstream t.o.v. Logistics: de release gebeurt asynchroon
+  via `PackageReadyEvent`.
+
+## 3. Event Driven Architecture (EDA)
+
+**Toepassing:** Warehouse is zowel **consumer** als **publisher** op dezelfde
+`ballcom-exchange` (fanout).
+
+- Consumer: `PaymentCompletedEventConsumer` — een `BackgroundService` die een eigen queue
+  (`warehouse.payment-completed`) aan de exchange bindt en op `PaymentCompletedEvent`
+  filtert (`ea.RoutingKey`). Geregistreerd via
+  `AddHostedService<PaymentCompletedEventConsumer>()` in `BallCom.Warehouse.API/Program.cs`.
+- Publisher: `IEventPublisher` + `RabbitMQEventPublisher`
+  (`BallCom.Warehouse.API/Messaging/`) publiceert `PackageReadyEvent` bij de overgang
+  naar `READY_FOR_SHIPMENT` — `BallCom.Warehouse.API/Models/Events/WarehouseEvents.cs`.
+
+## 4. CQRS
+
+**Toepassing:** Commands (schrijven) en Queries (lezen) zijn gescheiden in
+`PickListsController`.
+
+- **Commands** (records): `StartPickingCommand`, `CompletePickingCommand`, `PackCommand`,
+  `MarkReadyCommand` — `BallCom.Warehouse.API/Models/Commands/PickListCommands.cs`,
+  behandeld door de `POST`-acties `start-picking`, `complete-picking`, `pack`, `ready`.
+- **Queries** lezen uit het read model met `AsNoTracking()`: `GetPickLists`
+  (`GET /api/picklists`), `GetPickListById` (`GET /api/picklists/{id}`) en
+  `GetPickListByOrderId` (`GET /api/picklists/order/{orderId}`).
+
+## 5. Event Sourcing
+
+**Toepassing:** Alle mutaties worden opgeslagen als events in de append-only
+`EventStore`-tabel; het read model (`PickLists` + `PickListLines`) wordt vanuit die
+events geprojecteerd. Zelfde patroon als Catalog en Payment.
+
+- Event store entiteit: `StoredEvent` — `BallCom.Warehouse.API/Models/StoredEvent.cs`.
+- Append-only helper: `EventStore.Append<T>(...)` — `BallCom.Warehouse.API/Data/EventStore.cs`.
+- `DbSet<StoredEvent> EventStore` met auto-increment `Sequence` —
+  `BallCom.Warehouse.API/Data/WarehouseDbContext.cs`.
+- Vastgelegde events: `PickListCreatedEvent` (bij consume) en `PickListStatusChangedEvent`
+  (bij elke statusovergang in de controller). Telkens geldt: eerst `eventStore.Append(...)`,
+  dan projectie op het `PickList` read model, dan één `SaveChangesAsync()`.
+
+## 6. Enterprise Integration Patterns (EIP)
+
+**Gekozen patronen en motivatie:**
+
+- **Idempotent Receiver** — de consumer voorkomt dubbele verwerking van hetzelfde
+  `PaymentCompletedEvent` op twee niveaus: (1) een check
+  `PickLists.Any(p => p.OrderId == ...)` vóór insert, en (2) een **unieke database-index
+  op `OrderId`** (`WarehouseDbContext.OnModelCreating`) die een race afvangt. Zie
+  `BallCom.Warehouse.API/Messaging/PaymentCompletedEventConsumer.cs`.
+- **Content Enricher** — `PaymentCompletedEvent` bevat geen orderregels. De consumer
+  verrijkt het bericht door de ontbrekende gegevens via REST op te halen bij de Ordering
+  API (`FetchOrder` → `GET /api/orders/{id}`) en zet die om in `PickListLine`s. Zie
+  `PaymentCompletedEventConsumer.FetchOrder(...)` en `BallCom.Warehouse.API/Models/OrderDto.cs`.
+- **Messaging Gateway** — `WarehousePickListsController` in `BallCom.WarehousePortal.API`
+  schermt de Warehouse microservice af achter een dunne BFF voor de warehouse-medewerker.
+- **Message Translator** — `RabbitMQEventPublisher.Publish` vertaalt C#-records naar JSON
+  + routing key; de consumer vertaalt binnenkomende JSON terug naar het lokale contract
+  `PaymentCompletedEvent` (`BallCom.Warehouse.API/Models/Events/PaymentCompletedEvent.cs`),
+  zodat Payment ongewijzigd blijft.
+
+## 7. Containerization
+
+**Toepassing:** `warehouse_db` (Postgres) draait als container via Docker Compose op
+host-poort `5435` met eigen credentials; RabbitMQ blijft ongewijzigd. De .NET service
+draait voorlopig lokaal met `dotnet run`.
+
+- `docker-compose.yml` definieert de service `warehouse_db`.
+
+**Latere containerisatie van de .NET service** (stub):
+
+```dockerfile
+# BallCom.Warehouse.API/Dockerfile (voorbeeld, nog niet actief)
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+WORKDIR /src
+COPY . .
+RUN dotnet publish BallCom.Warehouse.API/BallCom.Warehouse.API.csproj -c Release -o /app
+
+FROM mcr.microsoft.com/dotnet/aspnet:10.0
+WORKDIR /app
+COPY --from=build /app .
+EXPOSE 5500
+ENTRYPOINT ["dotnet", "BallCom.Warehouse.API.dll"]
+```
+
+Bij containerisatie verandert de connection string van `localhost` naar de service-naam
+(`warehouse_db`), de RabbitMQ-host van `localhost` naar `rabbitmq` (in
+`RabbitMQEventPublisher` en `PaymentCompletedEventConsumer`) en het Ordering-base-address
+van `localhost:5100` naar de service-naam van Ordering, alle op het gedeelde
+`ballcom_network`.
