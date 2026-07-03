@@ -22,6 +22,7 @@ builder.Services.AddHttpClient("LogisticsService", client =>
 });
 
 builder.Services.AddScoped<InquiryStatusAggregator>();
+builder.Services.AddScoped<CustomerImportService>();
 
 builder.Services.AddControllers();
 
@@ -31,6 +32,9 @@ using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<CustomerServiceDbContext>();
     dbContext.Database.EnsureCreated();
+
+    var importer = services.GetRequiredService<CustomerImportService>();
+    importer.SyncExternalCustomers();
 }
 
 app.MapControllers();

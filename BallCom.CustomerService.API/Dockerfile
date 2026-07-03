@@ -8,6 +8,9 @@ RUN dotnet publish "BallCom.CustomerService.API/BallCom.CustomerService.API.cspr
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 WORKDIR /app
 COPY --from=build /app/publish .
+
+COPY ["BallCom.CustomerService.API/fake_customer_data_export.csv", "."]
+
 ENV ASPNETCORE_URLS=http://+:8080
 EXPOSE 8080
 ENTRYPOINT ["dotnet", "BallCom.CustomerService.API.dll"]
