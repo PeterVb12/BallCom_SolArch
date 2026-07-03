@@ -10,6 +10,10 @@ get {
   auth: none
 }
 
+script:pre-request {
+  await new Promise((resolve) => setTimeout(resolve, 2000));
+}
+
 tests {
   test("shipment exists for service portal order", function () {
     expect(res.getStatus()).to.equal(200);

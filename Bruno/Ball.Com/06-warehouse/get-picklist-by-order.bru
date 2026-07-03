@@ -10,10 +10,20 @@ get {
   auth: none
 }
 
+script:pre-request {
+  await new Promise((resolve) => setTimeout(resolve, 3000));
+}
+
 script:post-response {
   const data = res.getBody();
   if (data && data.id) {
     bru.setVar("pickListId", data.id);
     bru.setEnvVar("pickListId", data.id);
   }
+}
+
+tests {
+  test("picklist exists", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
 }
