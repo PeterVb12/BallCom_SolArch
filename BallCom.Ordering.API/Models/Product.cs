@@ -25,4 +25,15 @@ namespace BallCom.Ordering.API.Models
         decimal Price,
         DateTime OccurredAt
     );
+
+    // Integratie-event vanuit de Payment-service (RabbitMQ). Triggert in Ordering
+    // het MarkPaid-command op de event-sourced Order-aggregate.
+    public record PaymentCompletedIntegrationEvent
+    (
+        int OrderId,
+        Guid TransactionId,
+        decimal Amount,
+        string PaymentMethod,
+        DateTime CompletedAt
+    );
 }

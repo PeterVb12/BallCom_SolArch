@@ -3,9 +3,145 @@
 Dit document beschrijft **per principe** waar en hoe het is toegepast, met concrete
 verwijzingen naar bestanden en klassen. Er is een sectie per bounded context:
 
-- [Catalogus Service](#architectuurprincipes--catalogus-service) (hieronder)
+- [Ordering Service](#architectuurprincipes--ordering-service) — **referentie-implementatie Event Sourcing + CQRS** (hieronder)
+- [Catalogus Service](#architectuurprincipes--catalogus-service)
 - [Payment Service](#architectuurprincipes--payment-service)
-- [Warehouse Service](#architectuurprincipes--warehouse-service) (onderaan)
+- [Warehouse Service](#architectuurprincipes--warehouse-service)
+
+---
+
+# Architectuurprincipes — Ordering Service
+
+De Ordering-service is de **referentie-implementatie** van Event Sourcing gecombineerd
+met CQRS. De staat van een order bestaat niet als tabelrij; hij wordt **in code
+opgebouwd door de events opnieuw af te spelen** (rehydratie).
+
+## Overzicht van de bounded context
+
+```
+Klant ──POST /api/orders──> BallCom.Ordering.API (:5100)
+                                   │
+             SCHRIJFKANT (C)       │  1. valideer command
+             ───────────────       ▼  2. rehydrateer aggregate uit events (replay)
+        OrderAggregate.Rehydrate() ── leest ──> "OrderEvents" (append-only event store, bron van waarheid)
+                                   │  3. raise nieuw event
+                                   │  4. append-only wegschrijven  ─────────────> "OrderEvents"
+                                   │  5. event op INTERNE queue (Channel)
+                                   ▼
+                     ProjectionQueue (in-process, System.Threading.Channels)
+                                   │  asynchroon (eventueel consistent)
+                                   ▼
+             LEESKANT (Q)   OrderProjectionService (BackgroundService)
+             ────────────         │  projecteert events -> gedenormaliseerde tabellen
+                    ┌─────────────┼───────────────────────────┐
+                    ▼             ▼                            ▼
+             "OrderSummaries"  "OrderLineViews"        "CustomerOrderStats"
+             (1 rij/order)     (regels, geen FK)       (orders + besteed per klant)
+
+Queries (GET) lezen UITSLUITEND uit de read models.
+Cross-service (EDA): OrderPlacedEvent ──RabbitMQ──> Payment.  PaymentCompletedEvent ──RabbitMQ──> Ordering (MarkPaid).
+```
+
+## 1. Event Sourcing (kern van de herkansing)
+
+**Toepassing:** De schrijfkant bestaat **alleen uit events** in een append-only store.
+Er is geen `Orders`-statustabel meer aan de schrijfkant.
+
+- Append-only event store: tabel `OrderEvents` — entiteit `StoredEvent`
+  (`BallCom.Ordering.API/Models/StoredEvent.cs`), context
+  `OrderingWriteDbContext` (`BallCom.Ordering.API/Data/OrderingWriteDbContext.cs`).
+- **Rehydratie in code (het cruciale punt):** een aggregate wordt opgebouwd door zijn
+  events uit te lezen en één voor één opnieuw af te spelen via `Apply(...)`:
+  - `OrderAggregate.Rehydrate(history)` en `Apply(IOrderEvent)` —
+    `BallCom.Ordering.API/Domain/OrderAggregate.cs`
+  - `OrderEventStore.LoadAsync(orderId)` leest de stream (`Orderby Version`),
+    deserialiseert en roept `Rehydrate` aan — `BallCom.Ordering.API/Data/OrderEventStore.cs`
+  - Dit staat **los van queues**: het is puur events opnieuw afspelen in geheugen.
+- **Commands raisen events** (muteren de staat niet direct): `OrderAggregate.Place`,
+  `MarkPaid`, `Cancel`, `StartProcessing` valideren de business-regels tegen de
+  gerehydrateerde staat en roepen dan `Raise(nieuwEvent)` aan.
+- **Append-only schrijven** met **optimistic concurrency**: `OrderEventStore.SaveAsync`
+  schrijft de nieuwe events met een oplopende `Version`; de unieke index
+  `(StreamId, Version)` verhindert conflicterende gelijktijdige writes.
+- **Inspectie & herbouw**:
+  - `GET /api/orders/{id}/events` toont de ruwe event-stream van een order.
+  - `POST /api/orders/replay` bouwt **alle read models volledig opnieuw** op vanuit de
+    event store — `ReadModelRebuilder` (`BallCom.Ordering.API/Projections/ReadModelRebuilder.cs`).
+    Dit bewijst dat de read models wegwerpbaar en volledig afleidbaar zijn.
+
+## 2. CQRS (gecombineerd met Event Sourcing)
+
+**Toepassing:** Schrijfkant (C) en leeskant (Q) zijn volledig gescheiden, met **eigen
+DbContexts en eigen tabellen**, en de leeskant wordt **asynchroon** bijgewerkt.
+
+- **Command-zijde (C) = alleen events**:
+  - `PlaceOrderCommandHandler`, `MarkOrderPaidCommandHandler`, `CancelOrderCommandHandler`
+    (`BallCom.Ordering.API/Application/Commands/`).
+  - Schrijven uitsluitend naar de event store; muteren nooit een read model direct.
+- **Query-zijde (Q) = gedenormaliseerde read models** (geen foreign keys):
+  - `OrderSummary`, `OrderLineView`, `CustomerOrderStat`
+    (`BallCom.Ordering.API/ReadModels/OrderReadModels.cs`), context
+    `OrderingReadDbContext`.
+  - Meerdere projecties: naast het orderoverzicht ook een aparte tabel
+    `CustomerOrderStats` = "aantal orders + besteed bedrag per klant"
+    (`GET /api/orders/stats/customers`).
+  - `OrderQueryHandler` leest met `AsNoTracking()` en raakt de event store nooit aan.
+- **Asynchrone update via een interne queue** (precies zoals gevraagd in de feedback):
+  - `ProjectionQueue` = een in-process `System.Threading.Channels.Channel`
+    (`BallCom.Ordering.API/Projections/ProjectionQueue.cs`).
+  - De command-handler zet na een succesvolle append de nieuwe events op deze queue;
+    de HTTP-request wacht daar niet op.
+  - `OrderProjectionService` (`BackgroundService`) leegt de queue en werkt de read
+    models bij via `OrderReadModelProjector`. De leeskant is dus **eventueel consistent**.
+  - *Read-your-writes fallback:* zolang de projectie nog loopt, kan `GET /api/orders/{id}`
+    het antwoord alsnog uit de events rehydrateren (zie `OrdersController.GetById`).
+
+## 3. Eventual Consistency
+
+**Toepassing:** De leeskant loopt bewust achter op de schrijfkant. Tussen het
+wegschrijven van een event en het bijwerken van de read models zit het interne
+queue-venster. De `POST /api/orders`-respons komt daarom uit de zojuist gebouwde
+aggregate, zodat de client meteen het (int) order-id heeft.
+
+## 4. Event Driven Architecture (EDA)
+
+**Toepassing:** Ordering is zowel publisher als consumer op `ballcom-exchange` (fanout).
+
+- **Publisher**: na het plaatsen van een order publiceert
+  `PlaceOrderCommandHandler` het **integratie-event** `OrderPlacedEvent`
+  (`int OrderId, decimal TotalPrice, DateTime`) — ongewijzigd contract voor Payment.
+  Zie `RabbitMQEventPublisher` (`BallCom.Ordering.API/Messaging/RabbitMQEventPublisher.cs`).
+- **Consumer**: `RabbitMQEventConsumer` consumeert `PaymentCompletedEvent` en vertaalt
+  dat naar het **command** `MarkOrderPaid`. Dat laat mooi de volledige keten zien:
+  *integratie-event → command → rehydratie uit events → nieuw OrderPaidEvent → projectie*.
+  Ook `ProductAddedEvent`/`ProductUpdatedEvent` worden geconsumeerd voor de lokale
+  productreferentie (`BallCom.Ordering.API/Messaging/RabbitMQEventConsumer.cs`).
+
+> Let op het onderscheid: **domein-events** (`Domain/Events/OrderDomainEvents.cs`) leven
+> in de event store; **integratie-events** (`Models/`) gaan over RabbitMQ. Ze zijn
+> bewust gescheiden zodat cross-service contracten ongemoeid blijven.
+
+## 5. Domain-Driven Design (DDD)
+
+**Toepassing:** `OrderAggregate` is een echte **aggregate root** die zijn eigen
+invarianten afdwingt (bv. "een betaalde order kan niet meer geannuleerd worden",
+"alleen een betaalde order kan in behandeling"). De business-logica zit in het domein,
+niet in de controller.
+
+## 6. Enterprise Integration Patterns (EIP)
+
+- **Event Sourcing / Event Store** als integratiepatroon voor de schrijfkant.
+- **Message Translator** — `RabbitMQEventPublisher` vertaalt records naar JSON + routing
+  key; de consumer vertaalt inkomende JSON terug naar lokale contracten.
+- **Idempotent Receiver** — `OrderAggregate.MarkPaid` is idempotent (dubbele
+  `PaymentCompletedEvent` levert geen tweede `OrderPaidEvent` op), en de projector
+  controleert of een order al bestaat voordat hij projecteert.
+
+## 7. Containerization
+
+`ordering_db` (Postgres) en RabbitMQ draaien via Docker Compose. De schrijf- en
+leestabellen staan logisch gescheiden in dezelfde database; de connection string en
+RabbitMQ-host worden in `docker-compose.yml` via environment variables gezet.
 
 ---
 

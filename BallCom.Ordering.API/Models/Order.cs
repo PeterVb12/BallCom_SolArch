@@ -1,26 +1,8 @@
 namespace BallCom.Ordering.API.Models
 {
-    public class Order
-    {
-        public int Id { get; set; }
-        public decimal TotalPrice { get; set; }
-        public string Status { get; set; } = OrderStatus.Pending;
-        public string CustomerEmail { get; set; } = string.Empty;
-        public string CustomerName { get; set; } = string.Empty;
-        public string Street { get; set; } = string.Empty;
-        public string City { get; set; } = string.Empty;
-        public string PostalCode { get; set; } = string.Empty;
-        public string Country { get; set; } = string.Empty;
-        public List<OrderItem> Items { get; set; } = new();
-    }
-
-    public class OrderItem
-    {
-        public int Id { get; set; }
-        public string ProductId { get; set; } = string.Empty;
-        public int Quantity { get; set; }
-        public decimal Price { get; set; }
-    }
+    // Invoer-DTO's (command-contracten) en het integratie-event. De eigenlijke
+    // orderstaat leeft niet meer in een EF-entiteit maar in de event store
+    // (schrijfkant) en de read models (leeskant).
 
     public record CustomerDetailsDto(
         string Email,
@@ -32,6 +14,9 @@ namespace BallCom.Ordering.API.Models
 
     public record CreateOrderCommand(List<OrderItemDto> Items, CustomerDetailsDto Customer);
     public record OrderItemDto(string ProductId, int Quantity, decimal Price);
+
+    // INTEGRATIE-event (gaat via RabbitMQ naar Payment/Warehouse). Bewust met een
+    // int OrderId zodat de bestaande cross-service contracten ongewijzigd blijven.
     public record OrderPlacedEvent(int OrderId, decimal TotalPrice, DateTime CreatedAt);
 
     public static class OrderStatus

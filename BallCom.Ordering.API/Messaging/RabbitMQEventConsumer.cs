@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json;
+using BallCom.Ordering.API.Application.Commands;
 using BallCom.Ordering.API.Data;
 using BallCom.Ordering.API.Models;
 using RabbitMQ.Client;
@@ -40,75 +41,100 @@ namespace BallCom.Ordering.API.Messaging
             var consumer = new EventingBasicConsumer(_channel);
             consumer.Received += async (model, ea) =>
             {
-                var body = ea.Body.ToArray();
-                var json = Encoding.UTF8.GetString(body);
-
-                _logger.LogInformation("[Ordering Service] Bericht ontvangen via RabbitMQ: {Json} met RoutingKey: {Key}", json, ea.RoutingKey);
+                var json = Encoding.UTF8.GetString(ea.Body.ToArray());
+                _logger.LogInformation("[Ordering Service] Bericht ontvangen: {Key}", ea.RoutingKey);
 
                 try
                 {
-                    if (ea.RoutingKey == "ProductAddedEvent")
+                    switch (ea.RoutingKey)
                     {
-                        var productEvent = JsonSerializer.Deserialize<ProductAddedIntegrationEvent>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-
-                        if (productEvent != null)
-                        {
-                            var scope = _scopeFactory.CreateScope();
-                            var dbContext = scope.ServiceProvider.GetRequiredService<OrderingDbContext>();
-
-                            var exists = dbContext.Products.Any(p => p.Id == productEvent.ProductId);
-                            if (!exists)
-                            {
-                                var newProduct = new Product
-                                {
-                                    Id = productEvent.ProductId,
-                                    Name = productEvent.Name,
-                                    Price = productEvent.Price
-                                };
-
-                                dbContext.Products.Add(newProduct);
-                                await dbContext.SaveChangesAsync();
-                                _logger.LogInformation("[Ordering Service] Product {Name} succesvol opgeslagen in ordering_db!", newProduct.Name);
-                            }
-                        }
-                    }
-                    else if (ea.RoutingKey == "ProductUpdatedEvent")
-                    {
-                        var productEvent = JsonSerializer.Deserialize<ProductUpdatedEvent>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-
-                        if (productEvent != null)
-                        {
-                            var scope = _scopeFactory.CreateScope();
-                            var dbContext = scope.ServiceProvider.GetRequiredService<OrderingDbContext>();
-
-                            var product = dbContext.Products.FirstOrDefault(p => p.Id == productEvent.ProductId);
-                            if (product != null)
-                            {
-                                product.Name = productEvent.Name;
-                                product.Price = productEvent.Price;
-
-                                await dbContext.SaveChangesAsync();
-                                _logger.LogInformation("[Ordering Service] Product {Name} succesvol BIJGEWERKT in ordering_db!", product.Name);
-                            }
-                            else
-                            {
-                                _logger.LogWarning("[Ordering Service] Product {ProductId} kon niet worden geüpdatet omdat het hier onbekend is.", productEvent.ProductId);
-                            }
-                        }
-                    }
-                    else
-                    {
-                        _logger.LogInformation("[Ordering Service] Event genegeerd (RoutingKey: {Key}). Niet relevant voor de producttabel.", ea.RoutingKey);
+                        case "ProductAddedEvent":
+                            await HandleProductAddedAsync(json);
+                            break;
+                        case "ProductUpdatedEvent":
+                            await HandleProductUpdatedAsync(json);
+                            break;
+                        case "PaymentCompletedEvent":
+                            await HandlePaymentCompletedAsync(json);
+                            break;
+                        default:
+                            _logger.LogInformation("[Ordering Service] Event genegeerd (RoutingKey: {Key}).", ea.RoutingKey);
+                            break;
                     }
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "[Ordering Service] Fout bij verwerken van event.");
+                    _logger.LogError(ex, "[Ordering Service] Fout bij verwerken van event {Key}.", ea.RoutingKey);
                 }
             };
 
             _channel.BasicConsume(queue: _queueName, autoAck: true, consumer: consumer);
             _logger.LogInformation("[Ordering Service] Consumer luistert op queue '{Queue}'.", _queueName);
+        }
+
+        // Integratie-event -> COMMAND: markeer de order (event-sourced) als betaald.
+        private async Task HandlePaymentCompletedAsync(string json)
+        {
+            var paid = JsonSerializer.Deserialize<PaymentCompletedIntegrationEvent>(
+                json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            if (paid is null)
+            {
+                return;
+            }
+
+            using var scope = _scopeFactory.CreateScope();
+            var handler = scope.ServiceProvider.GetRequiredService<MarkOrderPaidCommandHandler>();
+            await handler.HandleAsync(new MarkOrderPaidCommand(paid.OrderId, paid.Amount));
+        }
+
+        private async Task HandleProductAddedAsync(string json)
+        {
+            var productEvent = JsonSerializer.Deserialize<ProductAddedIntegrationEvent>(
+                json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            if (productEvent is null)
+            {
+                return;
+            }
+
+            using var scope = _scopeFactory.CreateScope();
+            var dbContext = scope.ServiceProvider.GetRequiredService<OrderingWriteDbContext>();
+
+            if (!dbContext.Products.Any(p => p.Id == productEvent.ProductId))
+            {
+                dbContext.Products.Add(new Product
+                {
+                    Id = productEvent.ProductId,
+                    Name = productEvent.Name,
+                    Price = productEvent.Price
+                });
+                await dbContext.SaveChangesAsync();
+                _logger.LogInformation("[Ordering Service] Product {Name} opgeslagen in referentietabel.", productEvent.Name);
+            }
+        }
+
+        private async Task HandleProductUpdatedAsync(string json)
+        {
+            var productEvent = JsonSerializer.Deserialize<ProductUpdatedEvent>(
+                json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            if (productEvent is null)
+            {
+                return;
+            }
+
+            using var scope = _scopeFactory.CreateScope();
+            var dbContext = scope.ServiceProvider.GetRequiredService<OrderingWriteDbContext>();
+
+            var product = dbContext.Products.FirstOrDefault(p => p.Id == productEvent.ProductId);
+            if (product is not null)
+            {
+                product.Name = productEvent.Name;
+                product.Price = productEvent.Price;
+                await dbContext.SaveChangesAsync();
+                _logger.LogInformation("[Ordering Service] Product {Name} bijgewerkt in referentietabel.", product.Name);
+            }
         }
 
         private async Task TryConnectAsync(CancellationToken stoppingToken)
