@@ -3,9 +3,6 @@ using BallCom.Catalog.API.Models;
 
 namespace BallCom.Catalog.API.Data
 {
-    // Event Sourcing helper: schrijft domein-events als onveranderlijke feiten
-    // weg in de append-only EventStore tabel. De aanroeper is verantwoordelijk
-    // voor het projecteren van het read model en SaveChangesAsync().
     public class EventStore
     {
         private readonly CatalogDbContext _context;

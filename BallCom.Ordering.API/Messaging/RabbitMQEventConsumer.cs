@@ -72,7 +72,6 @@ namespace BallCom.Ordering.API.Messaging
             _logger.LogInformation("[Ordering Service] Consumer luistert op queue '{Queue}'.", _queueName);
         }
 
-        // Integratie-event -> COMMAND: markeer de order (event-sourced) als betaald.
         private async Task HandlePaymentCompletedAsync(string json)
         {
             var paid = JsonSerializer.Deserialize<PaymentCompletedIntegrationEvent>(

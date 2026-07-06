@@ -3,9 +3,6 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BallCom.Ordering.API.Data
 {
-    // LEESKANT (Q). Alleen gedenormaliseerde read models. Logisch gescheiden van
-    // de schrijfkant (aparte DbContext, eigen tabellen). Zou fysiek ook een
-    // andere database mogen zijn - de projector is de enige schrijver hier.
     public class OrderingReadDbContext : DbContext
     {
         public OrderingReadDbContext(DbContextOptions<OrderingReadDbContext> options) : base(options) { }

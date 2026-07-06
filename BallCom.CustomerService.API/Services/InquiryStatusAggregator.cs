@@ -3,9 +3,6 @@ using BallCom.CustomerService.API.Models;
 
 namespace BallCom.CustomerService.API.Services
 {
-    /// <summary>
-    /// Leest orderstatus bij Ordering (F13) en leveringsstatus bij Logistics (F13) voor klantvragen.
-    /// </summary>
     public class InquiryStatusAggregator
     {
         private readonly IHttpClientFactory _httpClientFactory;

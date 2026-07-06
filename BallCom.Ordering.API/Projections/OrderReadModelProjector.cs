@@ -5,9 +5,6 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BallCom.Ordering.API.Projections
 {
-    // Projecteert domein-events naar de gedenormaliseerde read models (Q).
-    // Wordt zowel live (OrderProjectionService) als bij een volledige rebuild
-    // (ReadModelRebuilder) gebruikt, met exact dezelfde Apply-logica.
     public class OrderReadModelProjector
     {
         private readonly OrderingReadDbContext _read;
@@ -50,9 +47,6 @@ namespace BallCom.Ordering.API.Projections
 
         private async Task ApplyPlacedAsync(OrderPlacedDomainEvent e, CancellationToken ct)
         {
-            // Idempotent: bestaat het overzicht al, dan is dit event al verwerkt.
-            // FindAsync checkt ook de nog-niet-opgeslagen entiteiten in de tracker,
-            // zodat een replay van meerdere events in één batch correct verloopt.
             var existing = await _read.OrderSummaries.FindAsync(new object?[] { e.OrderId }, ct);
             if (existing is not null)
             {
@@ -86,7 +80,6 @@ namespace BallCom.Ordering.API.Projections
                 });
             }
 
-            // Tweede projectie: "aantal orders + besteed bedrag per klant".
             var stat = await _read.CustomerOrderStats.FindAsync(new object?[] { e.CustomerEmail }, ct);
             if (stat is null)
             {
@@ -119,8 +112,6 @@ namespace BallCom.Ordering.API.Projections
         }
     }
 
-    // Statustekst voor de leeskant (spiegelt Models.OrderStatus, maar houdt de
-    // leeskant onafhankelijk van het schrijfmodel).
     public static class OrderStatusText
     {
         public const string Pending = "PENDING";

@@ -4,8 +4,6 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BallCom.Ordering.API.Application.Queries
 {
-    // QUERY-zijde (Q) van CQRS. Leest UITSLUITEND uit de gedenormaliseerde read
-    // models; raakt de event store nooit aan. AsNoTracking() want puur lezen.
     public class OrderQueryHandler
     {
         private readonly OrderingReadDbContext _read;

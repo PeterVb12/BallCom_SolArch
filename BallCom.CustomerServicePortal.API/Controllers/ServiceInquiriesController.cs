@@ -2,7 +2,6 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace BallCom.CustomerServicePortal.API.Controllers
 {
-    /// <summary>BFF naar Customer Service — klantvragen over orderstatus (F15).</summary>
     [ApiController]
     [Route("api/service/inquiries")]
     public class ServiceInquiriesController : ControllerBase

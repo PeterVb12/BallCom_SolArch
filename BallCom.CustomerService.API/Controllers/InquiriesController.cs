@@ -14,7 +14,6 @@ namespace BallCom.CustomerService.API.Controllers
             _statusAggregator = statusAggregator;
         }
 
-        /// <summary>Leest order- en leveringsstatus om klantvragen te beantwoorden (F15).</summary>
         [HttpGet("orders/{orderId:int}/status")]
         public async Task<IActionResult> GetOrderInquiryStatus(int orderId)
         {

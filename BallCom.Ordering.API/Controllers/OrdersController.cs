@@ -35,19 +35,12 @@ namespace BallCom.Ordering.API.Controllers
             _logger = logger;
         }
 
-        // ---------------------------------------------------------------
-        // CQRS - COMMAND zijde (schrijven -> events)
-        // ---------------------------------------------------------------
-
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] CreateOrderCommand command)
         {
             try
             {
                 var order = await _placeOrder.HandleAsync(command);
-                // De respons komt uit de zojuist gebouwde aggregate zodat de client
-                // meteen het (int) order-id terugkrijgt, ook al is de leeskant nog
-                // eventueel consistent.
                 return Ok(BuildOrderResponse(order));
             }
             catch (ArgumentException ex)
@@ -70,10 +63,6 @@ namespace BallCom.Ordering.API.Controllers
             }
         }
 
-        // ---------------------------------------------------------------
-        // CQRS - QUERY zijde (lezen uit de gedenormaliseerde read models)
-        // ---------------------------------------------------------------
-
         [HttpGet("{id:int}")]
         public async Task<IActionResult> GetById(int id)
         {
@@ -83,13 +72,10 @@ namespace BallCom.Ordering.API.Controllers
                 return Ok(BuildOrderResponse(view));
             }
 
-            // Read-your-writes fallback: als de projectie nog niet klaar is, bouwen
-            // we het antwoord alsnog op door de events te replayen (rehydratie).
             var aggregate = await _eventStore.LoadAsync(id);
             return aggregate is null ? NotFound() : Ok(BuildOrderResponse(aggregate));
         }
 
-        /// <summary>F13: orderstatus ophalen bij de Order service.</summary>
         [HttpGet("{id:int}/status")]
         public async Task<IActionResult> GetOrderStatus(int id)
         {
@@ -111,16 +97,10 @@ namespace BallCom.Ordering.API.Controllers
         public async Task<IActionResult> GetAll()
             => Ok(await _queries.GetAllAsync());
 
-        /// <summary>Tweede read model: aantal orders + besteed bedrag per klant.</summary>
         [HttpGet("stats/customers")]
         public async Task<IActionResult> GetCustomerStats()
             => Ok(await _queries.GetCustomerStatsAsync());
 
-        // ---------------------------------------------------------------
-        // Event Sourcing - inspectie & herbouw
-        // ---------------------------------------------------------------
-
-        /// <summary>Toont de ruwe, append-only event-stream van één order.</summary>
         [HttpGet("{id:int}/events")]
         public async Task<IActionResult> GetEvents(int id)
         {
@@ -141,17 +121,12 @@ namespace BallCom.Ordering.API.Controllers
             }));
         }
 
-        /// <summary>Herbouwt alle read models volledig vanuit de event store.</summary>
         [HttpPost("replay")]
         public async Task<IActionResult> Replay()
         {
             var count = await _rebuilder.RebuildAsync();
             return Ok($"Read models herbouwd vanuit {count} events.");
         }
-
-        // ---------------------------------------------------------------
-        // Response-opbouw (contract blijft gelijk voor Warehouse/portals)
-        // ---------------------------------------------------------------
 
         private static object BuildOrderResponse(OrderAggregate order) => new
         {

@@ -2,9 +2,6 @@ using BallCom.Ordering.API.Data;
 
 namespace BallCom.Ordering.API.Projections
 {
-    // Achtergrondproces dat de interne projectie-queue leegt en de leeskant (Q)
-    // bijwerkt. Dit maakt de update van de read models ASYNCHROON t.o.v. de
-    // schrijfkant: de HTTP-request die het event aanmaakt wacht hier niet op.
     public class OrderProjectionService : BackgroundService
     {
         private readonly ProjectionQueue _queue;

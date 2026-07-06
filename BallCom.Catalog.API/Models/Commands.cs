@@ -1,7 +1,5 @@
 namespace BallCom.Catalog.API.Models
 {
-    // CQRS - COMMAND zijde: schrijf-intenties die de domeinstatus muteren.
-    // Deze records komen binnen via POST endpoints.
     public record AddProductCommand(
         string Name,
         string Description,

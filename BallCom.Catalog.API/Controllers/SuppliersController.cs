@@ -23,7 +23,6 @@ namespace BallCom.Catalog.API.Controllers
             _eventPublisher = eventPublisher;
         }
 
-        // CQRS - COMMAND: registreer een vertrouwde supplier.
         [HttpPost]
         public async Task<IActionResult> RegisterSupplier([FromBody] RegisterSupplierCommand command)
         {
@@ -38,7 +37,6 @@ namespace BallCom.Catalog.API.Controllers
             var supplierRegisteredEvent = new SupplierRegisteredEvent(
                 supplierId, command.Name, command.ContactEmail, occurredAt);
 
-            // Event Sourcing: leg de registratie vast als feit in de event store.
             var eventStore = new EventStore(_context);
             eventStore.Append(supplierId, nameof(TrustedSupplier), supplierRegisteredEvent);
 
@@ -59,7 +57,6 @@ namespace BallCom.Catalog.API.Controllers
             return CreatedAtAction(nameof(GetSuppliers), new { id = supplierId }, supplier);
         }
 
-        // CQRS - QUERY: lijst van vertrouwde suppliers.
         [HttpGet]
         public async Task<IActionResult> GetSuppliers()
         {

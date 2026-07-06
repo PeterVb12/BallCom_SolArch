@@ -6,10 +6,6 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BallCom.Ordering.API.Data
 {
-    // De append-only event store voor de Order-aggregate.
-    //  - LoadAsync   : leest de event-stream en bouwt de aggregate op via replay.
-    //  - SaveAsync   : schrijft de nieuwe (uncommitted) events append-only weg.
-    //  - NextOrderIdAsync : levert een nieuw order-id uit een Postgres-sequence.
     public class OrderEventStore
     {
         private const string AggregateType = "Order";
@@ -22,14 +18,12 @@ namespace BallCom.Ordering.API.Data
 
         public async Task<int> NextOrderIdAsync()
         {
-            // Id wordt op command-moment toegekend, los van enige statustabel.
             var ids = await _context.Database
                 .SqlQueryRaw<int>("SELECT nextval('order_id_seq')::int AS \"Value\"")
                 .ToListAsync();
             return ids[0];
         }
 
-        // Rehydratie: bouw de aggregate op door alle events uit de stream af te spelen.
         public async Task<OrderAggregate?> LoadAsync(int orderId)
         {
             var streamId = orderId.ToString();
@@ -59,9 +53,6 @@ namespace BallCom.Ordering.API.Data
                 .ToListAsync();
         }
 
-        // Append-only wegschrijven van de nieuwe events die de aggregate produceerde.
-        // Geeft de weggeschreven events terug zodat de aanroeper ze op de interne
-        // projectie-queue kan zetten (asynchrone update van de leeskant).
         public async Task<IReadOnlyList<IOrderEvent>> SaveAsync(OrderAggregate aggregate)
         {
             var newEvents = aggregate.DequeueUncommittedEvents();
@@ -70,7 +61,7 @@ namespace BallCom.Ordering.API.Data
                 return newEvents;
             }
 
-            var version = aggregate.Version; // reeds gepersisteerde versie
+            var version = aggregate.Version;
             foreach (var @event in newEvents)
             {
                 version++;
@@ -85,8 +76,6 @@ namespace BallCom.Ordering.API.Data
                 });
             }
 
-            // De unieke index (StreamId, Version) dwingt optimistic concurrency af:
-            // gelijktijdige schrijvers op dezelfde stream botsen op een DbUpdateException.
             await _context.SaveChangesAsync();
 
             return newEvents;

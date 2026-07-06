@@ -1,7 +1,5 @@
 namespace BallCom.Catalog.API.Models
 {
-    // DDD Aggregate Root binnen de bounded context 'Catalogus'.
-    // Dit is tevens het READ MODEL dat geprojecteerd wordt vanuit de event store.
     public class Product
     {
         public Guid Id { get; set; }

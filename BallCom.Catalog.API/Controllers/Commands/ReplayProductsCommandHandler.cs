@@ -20,11 +20,9 @@ namespace BallCom.Catalog.API.Commands
         {
             _logger.LogWarning("[Catalog Service - ES] START REPLAY: Het read model wordt volledig opnieuw opgebouwd vanuit de Event Store.");
 
-            // Gooi de huidige Products-tabel LEEG
             await _context.Database.ExecuteSqlRawAsync("TRUNCATE TABLE \"Products\";");
             await _context.SaveChangesAsync();
 
-            // Haal ALLE events op, gesorteerd op 'Sequence' (volgorde van optreden)
             var allEvents = await _context.EventStore
                 .OrderBy(e => e.Sequence)
                 .ToListAsync();
@@ -33,7 +31,6 @@ namespace BallCom.Catalog.API.Commands
 
             var reconstructedProducts = new List<Product>();
 
-            // Loop door elk event heen en herstel de status
             foreach (var eventEntry in allEvents)
             {
                 if (eventEntry.EventType == nameof(ProductAddedEvent))
@@ -60,7 +57,6 @@ namespace BallCom.Catalog.API.Commands
                 }
             }
 
-            // Voeg alle heropgebouwde producten toe aan de lege tabel
             if (reconstructedProducts.Any())
             {
                 _context.Products.AddRange(reconstructedProducts);

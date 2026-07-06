@@ -2,7 +2,6 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace BallCom.CustomerServicePortal.API.Controllers
 {
-    /// <summary>BFF naar Logistics — leveringsstatus voor service-medewerkers (diagram: portal → Logistic).</summary>
     [ApiController]
     [Route("api/service/delivery")]
     public class ServiceDeliveryController : ControllerBase

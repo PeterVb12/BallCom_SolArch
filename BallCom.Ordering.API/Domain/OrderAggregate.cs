@@ -3,27 +3,10 @@ using BallCom.Ordering.API.Models;
 
 namespace BallCom.Ordering.API.Domain
 {
-    // ============================================================================
-    //  EVENT SOURCING - de Order aggregate
-    // ============================================================================
-    //  De huidige staat van een order wordt NIET uit een tabelrij gelezen, maar
-    //  volledig OPGEBOUWD door de events uit zijn event-stream opnieuw af te
-    //  spelen in code (rehydratie). Dat gebeurt in Rehydrate(...) -> Apply(...).
-    //
-    //  Een command (Place / MarkPaid / Cancel) werkt zo:
-    //    1. laad de aggregate door zijn events te replayen  (OrderEventStore.LoadAsync)
-    //    2. controleer de business-regels tegen die gereconstrueerde staat
-    //    3. raise een NIEUW event (AddEvent + Apply) i.p.v. de staat direct te muteren
-    //    4. de nieuwe events worden append-only weggeschreven in de event store
-    //
-    //  Het heeft dus NIETS met queues te maken; het is puur het opnieuw
-    //  afspelen van events in geheugen.
-    // ============================================================================
     public class OrderAggregate
     {
         private readonly List<IOrderEvent> _uncommittedEvents = new();
 
-        // Staat - uitsluitend het resultaat van afgespeelde events.
         public int Id { get; private set; }
         public string Status { get; private set; } = OrderStatus.Pending;
         public decimal TotalPrice { get; private set; }
@@ -35,14 +18,11 @@ namespace BallCom.Ordering.API.Domain
         public string Country { get; private set; } = string.Empty;
         public List<OrderLineData> Items { get; private set; } = new();
 
-        // Aantal events dat al persistent in de store staat (voor optimistic concurrency).
         public int Version { get; private set; }
         private bool Exists => Version > 0 || _uncommittedEvents.Count > 0;
 
-        // Privé: alleen te maken via de factory Place(...) of via Rehydrate(...).
         private OrderAggregate() { }
 
-        // ----- Rehydratie: bouw de aggregate op door events af te spelen -----
         public static OrderAggregate Rehydrate(IEnumerable<IOrderEvent> history)
         {
             var order = new OrderAggregate();
@@ -53,8 +33,6 @@ namespace BallCom.Ordering.API.Domain
             }
             return order;
         }
-
-        // ----- Commands (schrijfkant): valideren en NIEUWE events raisen -----
 
         public static OrderAggregate Place(
             int orderId,
@@ -86,8 +64,6 @@ namespace BallCom.Ordering.API.Domain
                 throw new InvalidOperationException("Order bestaat niet.");
             }
 
-            // Idempotent: al betaald? Dan geen nieuw event (voorkomt dubbele PAID-events
-            // bij at-least-once bezorging van PaymentCompletedEvent).
             if (Status == OrderStatus.Paid || Status == OrderStatus.Processing)
             {
                 return;
@@ -120,7 +96,7 @@ namespace BallCom.Ordering.API.Domain
 
             if (Status == OrderStatus.Cancelled)
             {
-                return; // idempotent
+                return;
             }
 
             if (Status == OrderStatus.Processing)
@@ -131,16 +107,12 @@ namespace BallCom.Ordering.API.Domain
             Raise(new OrderCancelledDomainEvent(Id, reason, DateTime.UtcNow));
         }
 
-        // ----- Event-plumbing -----
-
         private void Raise(IOrderEvent @event)
         {
             Apply(@event);
             _uncommittedEvents.Add(@event);
         }
 
-        // De projectie van event -> in-memory staat. Zowel bij het raisen van een
-        // nieuw event als bij rehydratie wordt exact dezelfde logica gebruikt.
         private void Apply(IOrderEvent @event)
         {
             switch (@event)

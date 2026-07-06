@@ -2,10 +2,6 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace BallCom.API.Controllers
 {
-    /// <summary>
-    /// F12: klant bekijkt orderstatus via Ball.com portal.
-    /// Orderstatus uit Ordering (F13), leveringsstatus uit Logistics (F13).
-    /// </summary>
     [ApiController]
     [Route("api/customer/orders")]
     public class CustomerOrderStatusController : ControllerBase

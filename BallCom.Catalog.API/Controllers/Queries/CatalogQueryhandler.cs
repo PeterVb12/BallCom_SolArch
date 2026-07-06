@@ -13,15 +13,13 @@ namespace BallCom.Catalog.API.Queries
             _context = context;
         }
 
-        // Handler voor de volledige lijst
         public async Task<List<Product>> HandleAsync(GetAllProductsQuery query)
         {
             return await _context.Products
-                .AsNoTracking() // Zorgt voor performance optimalisatie bij geen achtergrond taken
+                .AsNoTracking()
                 .ToListAsync();
         }
 
-        // Handler voor één specifiek product
         public async Task<Product?> HandleAsync(GetProductByIdQuery query)
         {
             return await _context.Products

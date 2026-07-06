@@ -13,7 +13,6 @@ namespace BallCom.Supplier.API.Controllers
             _catalogClient = httpClientFactory.CreateClient("CatalogService");
         }
 
-        // Gateway: supplier voegt een product toe -> doorgezet naar Catalog microservice.
         [HttpPost]
         public async Task<IActionResult> AddProduct([FromBody] object productPayload)
         {
@@ -29,7 +28,6 @@ namespace BallCom.Supplier.API.Controllers
             return Ok(createdProduct);
         }
 
-        // Gateway: supplier bekijkt de beschikbare producten.
         [HttpGet]
         public async Task<IActionResult> GetProducts()
         {

@@ -6,11 +6,6 @@ namespace BallCom.Ordering.API.Application.Commands
     public record MarkOrderPaidCommand(int OrderId, decimal Amount);
     public record CancelOrderCommand(int OrderId, string Reason);
 
-    // COMMAND-zijde. Beide handlers volgen het event-sourcing-recept:
-    //   1. laad de aggregate door zijn events opnieuw AF TE SPELEN (rehydratie)
-    //   2. voer de business-regel uit op die gereconstrueerde staat
-    //   3. schrijf het nieuwe event append-only weg
-    //   4. zet het event op de interne queue voor de leeskant
     public class MarkOrderPaidCommandHandler
     {
         private readonly OrderEventStore _eventStore;

@@ -16,7 +16,6 @@ namespace BallCom.API.Controllers
         [HttpPost]
         public async Task<IActionResult> PlaceOrder([FromBody] object orderPayload)
         {
-            // Het portaal ontvangt de klik van de klant en stuurt dit direct door naar de Ordering microservice
             var response = await _orderingClient.PostAsJsonAsync("api/orders", orderPayload);
 
             if (!response.IsSuccessStatusCode)

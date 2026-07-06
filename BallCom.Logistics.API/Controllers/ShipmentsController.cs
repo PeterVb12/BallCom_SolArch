@@ -48,7 +48,6 @@ namespace BallCom.Logistics.API.Controllers
             return Ok(shipment);
         }
 
-        /// <summary>F13: leveringsstatus ophalen bij de geselecteerde logistieke partij (NF16).</summary>
         [HttpGet("order/{orderId:int}/delivery-status")]
         public async Task<IActionResult> GetDeliveryStatus(int orderId)
         {

@@ -8,9 +8,6 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BallCom.Ordering.API.Application.Commands
 {
-    // COMMAND-zijde (C) van CQRS. Valideert de business-regels, laat de aggregate
-    // een OrderPlaced-event raisen, schrijft dat append-only weg en zet het op de
-    // interne queue voor de (asynchrone) projectie naar de leeskant.
     public class PlaceOrderCommandHandler
     {
         private readonly OrderEventStore _eventStore;
@@ -63,13 +60,10 @@ namespace BallCom.Ordering.API.Application.Commands
                 lines,
                 totalPrice);
 
-            // Append-only naar de event store (bron van waarheid).
             var appended = await _eventStore.SaveAsync(aggregate);
 
-            // Asynchroon de leeskant bijwerken via de interne queue.
             await _projectionQueue.EnqueueAsync(appended);
 
-            // EDA: integratie-event naar andere microservices (Payment).
             _eventPublisher.Publish(new OrderPlacedEvent(orderId, totalPrice, DateTime.UtcNow));
 
             _logger.LogInformation("[Ordering ES] Order {OrderId} geplaatst (event opgeslagen + gepubliceerd).", orderId);

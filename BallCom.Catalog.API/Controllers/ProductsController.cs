@@ -9,13 +9,11 @@ namespace BallCom.Catalog.API.Controllers
     [Route("api/products")]
     public class ProductsController : ControllerBase
     {        
-        // Onze CQRS Handlers
         private readonly AddProductCommandHandler _addProductHandler;
         private readonly CatalogQueryHandler _catalogQueryHandler; 
         private readonly UpdateProductCommandHandler _updateProductHandler;
         private readonly ReplayProductsCommandHandler _replayProductsHandler;
 
-        // Logger voor foutmeldingen en waarschuwingen
         private readonly ILogger<ProductsController> _logger;
 
         public ProductsController(
@@ -33,10 +31,6 @@ namespace BallCom.Catalog.API.Controllers
             _replayProductsHandler = replayProductsHandler;
         }
 
-        // ---------------------------------------------------------------
-        // Replay - Event Sourcing: Herstel de read model vanuit de Event Store
-        // ---------------------------------------------------------------
-
         [HttpPost("replay")]
         public async Task<IActionResult> ReplayProducts()
         {
@@ -51,10 +45,6 @@ namespace BallCom.Catalog.API.Controllers
                 return StatusCode(500, $"Replay mislukt: {ex.Message}");
             }
         }
-
-        // ---------------------------------------------------------------
-        // CQRS - COMMAND zijde (schrijven)
-        // ---------------------------------------------------------------
 
         [HttpPost]
         public async Task<IActionResult> AddProduct([FromBody] AddProductCommand command)
@@ -94,14 +84,9 @@ namespace BallCom.Catalog.API.Controllers
             }
         }
 
-        // ---------------------------------------------------------------
-        // CQRS - QUERY zijde (lezen vanuit het geprojecteerde read model)
-        // ---------------------------------------------------------------
-
         [HttpGet]
         public async Task<IActionResult> GetProducts()
         {
-            // Maak de query aan en geef hem aan de query handler
             var query = new GetAllProductsQuery();
             var products = await _catalogQueryHandler.HandleAsync(query);
             
@@ -111,7 +96,6 @@ namespace BallCom.Catalog.API.Controllers
         [HttpGet("{id}")]
         public async Task<IActionResult> GetProductById(Guid id)
         {
-            // Stop het ID in het query contract en geef hem aan de handler
             var query = new GetProductByIdQuery(id);
             var product = await _catalogQueryHandler.HandleAsync(query);
             

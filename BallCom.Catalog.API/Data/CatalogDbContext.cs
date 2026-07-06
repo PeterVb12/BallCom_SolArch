@@ -7,11 +7,9 @@ namespace BallCom.Catalog.API.Data
     {
         public CatalogDbContext(DbContextOptions<CatalogDbContext> options) : base(options) { }
 
-        // Read models (projecties vanuit de event store)
         public DbSet<Product> Products { get; set; }
         public DbSet<TrustedSupplier> Suppliers { get; set; }
 
-        // Event Sourcing - append-only log van alle mutaties
         public DbSet<StoredEvent> EventStore { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)

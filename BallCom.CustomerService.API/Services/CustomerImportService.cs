@@ -15,7 +15,6 @@ namespace BallCom.CustomerService.API.Services
             _bus = bus;
         }
 
-        // 1. CHANNEL ADAPTER PATTERN
         public void SyncExternalCustomers()
         {
             string filePath = "fake_customer_data_export.csv";
@@ -43,7 +42,6 @@ namespace BallCom.CustomerService.API.Services
                     continue;
                 }
 
-                // 2. MESSAGE TRANSLATOR PATTERN
                 var newCustomer = new Customer
                 {
                     Id = Guid.NewGuid(),
@@ -57,7 +55,6 @@ namespace BallCom.CustomerService.API.Services
                 _context.Customers.Add(newCustomer);
                 _context.SaveChanges();
 
-                // 3. EVENT-DRIVEN
                 _bus.Publish(new CustomerCreatedEvent
                 {
                     CustomerId = newCustomer.Id,

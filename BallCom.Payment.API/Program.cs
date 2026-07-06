@@ -4,8 +4,6 @@ using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 
 var connectionString = builder.Configuration.GetConnectionString("Default")
@@ -17,7 +15,6 @@ builder.Services.AddControllers();
 
 builder.Services.AddScoped<IEventPublisher, RabbitMQEventPublisher>();
 
-// Event Driven Architecture: achtergrond-consumer voor OrderPlacedEvent.
 builder.Services.AddHostedService<OrderPlacedEventConsumer>();
 
 var app = builder.Build();
@@ -30,12 +27,9 @@ using (var scope = app.Services.CreateScope())
 
 app.MapControllers();
 
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
 }
-
-//app.UseHttpsRedirection();
 
 app.Run();

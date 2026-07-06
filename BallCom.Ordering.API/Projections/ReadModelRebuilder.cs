@@ -6,10 +6,6 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BallCom.Ordering.API.Projections
 {
-    // Herbouwt de VOLLEDIGE leeskant (Q) vanuit de event store. Dit toont de kern
-    // van event sourcing: de read models zijn wegwerpbaar en volledig af te leiden
-    // door alle events opnieuw af te spelen. Handig na een schema-wijziging of om
-    // een nieuwe projectie toe te voegen.
     public class ReadModelRebuilder
     {
         private readonly OrderingWriteDbContext _write;

@@ -13,7 +13,6 @@ namespace BallCom.Supplier.API.Controllers
             _catalogClient = httpClientFactory.CreateClient("CatalogService");
         }
 
-        // Gateway: supplier registreert zich -> doorgezet naar Catalog microservice.
         [HttpPost]
         public async Task<IActionResult> Register([FromBody] object supplierPayload)
         {
